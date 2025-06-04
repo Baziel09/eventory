@@ -10,7 +10,7 @@ class Item extends Model
 {
     protected $fillable = [
         'name',
-        'unit',
+        'unit_id',
         'category_id'
     ];
 
@@ -27,5 +27,9 @@ class Item extends Model
     public function stockTransactions(): HasMany
     {
         return $this->hasMany(StockTransaction::class);
+    }
+    public function Unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
     }
 }
