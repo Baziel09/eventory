@@ -78,10 +78,8 @@ class SupplierResource extends Resource
     {
         return [
             RelationManagers\ItemsRelationManager::class,
-            // RelationGroup::make('Orders',[
-            //         RelationManagers\OrdersRelationManager::class,
-            //         RelationManagers\DeliveriesRelationManager::class,
-            // ]),
+            // RelationManagers\OrdersRelationManager::class,
+            // RelationManagers\DeliveriesRelationManager::class,
                 // ->canSee(function (): bool {
                 //     return auth()->user()->hasRole('admin');
                 // }),

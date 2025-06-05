@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\SupplierResource\RelationManagers;
 
 use App\Models\Item;
+use App\Models\Category;
+use App\Models\Unit;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -26,30 +28,52 @@ class ItemsRelationManager extends RelationManager
             ]);
     }
 
-        public function table(Tables\Table $table): Tables\Table
+    public function table(Tables\Table $table): Tables\Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Item Name')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('pivot.cost_price')->label('Cost Price'),
+                Tables\Columns\TextColumn::make('name')->label('Item Name')
+                    ->url(fn (Item $record): string => route('filament.admin.resources.items.edit', ['record' => $record]))
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('category.name')->label('Category')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('pivot.cost_price')
+                    ->label('Cost Price')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('unit.name')->label('Unit')
+                    ->sortable()
+                    ->searchable(),
+            ])
+            ->filters([
+                Tables\Filters\TrashedFilter::make(),
+                Tables\Filters\SelectFilter::make('category')->relationship('category', 'name'),
             ])
             ->headerActions([
                 Tables\Actions\AttachAction::make()
-                ->form([
-                    Forms\Components\Select::make('recordId')
-                        ->label('Item')
-                        ->options(Item::pluck('name', 'id'))
-                        ->searchable()
-                        ->createOptionForm([
-                            Forms\Components\TextInput::make('name')->required(),
-                            Forms\Components\TextInput::make('unit')->required(),
-                            Forms\Components\Select::make('category_id')
-                                ->relationship('category', 'name')
-                                ->required(),
-                        ]),
-                    Forms\Components\TextInput::make('cost_price')->numeric()->required(),
-                ]),
-
+                    ->form([
+                        Forms\Components\Select::make('recordId')
+                            ->label('Item')
+                            ->options(Item::pluck('name', 'id'))
+                            ->searchable()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('name')->required(),
+                                Forms\Components\Select::make('unit_id')
+                                    ->label('Unit')
+                                    ->options(Unit::pluck('name', 'id'))
+                                    ->required(),
+                                Forms\Components\Select::make('category_id')
+                                    ->label('Category')
+                                    ->options(Category::pluck('name', 'id'))
+                                    ->required(),
+                            ])
+                            ->createOptionUsing(function (array $data): int {
+                                $item = Item::create($data);
+                                return $item->id;
+                            }),
+                        Forms\Components\TextInput::make('cost_price')->numeric()->required(),
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()

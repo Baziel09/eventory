@@ -37,11 +37,6 @@ class ItemResource extends Resource
                 Forms\Components\Select::make('category_id')
                     ->relationship('category', 'name')
                     ->required(),
-                Forms\Components\Select::make('suppliers')
-                    ->relationship('suppliers', 'name')
-                    ->multiple()
-                    ->preload()
-                    ->label('Suppliers'),
             ]);
     }
     public static function table(Table $table): Table
@@ -87,7 +82,7 @@ class ItemResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\SupplierRelationManager::class,
         ];
     }
 
