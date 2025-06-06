@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
@@ -42,6 +43,13 @@ class Item extends Model
     {
         return $this->belongsToMany(Supplier::class, 'supplier_item')
             ->withPivot('cost_price')
+            ->withTimestamps();
+    }
+
+    public function orders()
+    {
+        return $this->belongsToMany(Order::class, 'order_items')
+            ->withPivot('quantity')
             ->withTimestamps();
     }
 
