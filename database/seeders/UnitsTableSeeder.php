@@ -22,6 +22,8 @@ class UnitsTableSeeder extends Seeder
             ['name' => 'Bakken'],
         ];
 
-        DB::table('units')->insert($units);
+        foreach ($units as $unit) {
+            \App\Models\Unit::firstOrCreate(['name' => $unit['name']], $unit);
+        }
     }
 }

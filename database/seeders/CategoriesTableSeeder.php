@@ -25,6 +25,8 @@ class CategoriesTableSeeder extends Seeder
             ['name' => 'Vegetarisch'],
         ];
 
-        DB::table('categories')->insert($categories);
+        foreach ($categories as $category) {
+            App\Models\Category::firstOrCreate(['name' => $category['name']], $category);
+        }
     }
 }
