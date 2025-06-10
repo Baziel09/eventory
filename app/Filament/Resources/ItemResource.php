@@ -69,7 +69,6 @@ class ItemResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\RestoreAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

@@ -10,7 +10,8 @@ class Vendor extends Model
 {
     protected $fillable = [
         'name',
-        'event_id'
+        'event_id',
+        'location_id',
     ];
 
     public function event(): BelongsTo
@@ -31,5 +32,10 @@ class Vendor extends Model
     public function stockTransactions(): HasMany
     {
         return $this->hasMany(StockTransaction::class);
+    }
+    
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 }
