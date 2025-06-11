@@ -24,6 +24,7 @@ class AdminPanelProvider extends PanelProvider
     {
         return $panel
             ->default()
+            ->theme(asset('css/filament/admin/theme.css'))
             ->id('admin')
             ->path('')
             ->login()

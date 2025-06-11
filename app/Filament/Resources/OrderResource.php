@@ -9,6 +9,7 @@ use App\Models\Vendor;
 use App\Models\Supplier;
 use App\Models\Item;
 use App\Models\OrderItem;
+
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -20,8 +21,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Components\RepeatableEntry;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -29,6 +28,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Section as FormSection;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
@@ -36,9 +36,15 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\VerticalAlignment;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderMail;
 use App\Services\OrderPdfService;
+use Awcodes\TableRepeater\Components\TableRepeater;
+use Awcodes\TableRepeater\Header;
+
 
 class OrderResource extends Resource
 {
@@ -87,6 +93,7 @@ class OrderResource extends Resource
                                     ->options([
                                         'pending' => 'In afwachting',
                                         'confirmed' => 'Bevestigd',
+                                        'sent' => 'Verstuurd',
                                         'delivered' => 'Geleverd',
                                         'cancelled' => 'Geannuleerd',
                                     ])
@@ -94,50 +101,231 @@ class OrderResource extends Resource
                                     ->required(),
                             ]),
                     ]),
-                    
+
+                TableRepeater::make('orderItems')
+                    ->label('Bestelde Items')
+                    ->relationship('orderItems')
+                    ->headers([
+                        Header::make('item_id')
+                            ->label('Item')
+                            ->width('300px')
+                            ->markAsRequired(),
+                        Header::make('quantity')
+                            ->label('Aantal')
+                            ->width('120px')
+                            ->markAsRequired(),
+                        Header::make('unit')
+                            ->label('Eenheid')
+                            ->width('120px'),
+                        Header::make('price')
+                            ->label('Prijs per eenheid')
+                            ->width('150px'),
+                        Header::make('total')
+                            ->label('Totaal')
+                            ->width('150px'),
+                    ])
+                    ->schema([
+                        Select::make('item_id')
+                            ->label('Item')
+                            ->options(function (callable $get) {
+                                $supplierId = $get('../../supplier_id');
+                                \Log::info('Getting items for supplier:', ['supplier_id' => $supplierId]);
+                                
+                                if (!$supplierId) {
+                                    return [];
+                                }
+                                
+                                $items = Item::whereHas('suppliers', function ($query) use ($supplierId) {
+                                    $query->where('supplier_id', $supplierId);
+                                })->with('unit')->get();
+                                
+                                \Log::info('Found items:', ['count' => $items->count(), 'items' => $items->pluck('name', 'id')->toArray()]);
+                                
+                                return $items->pluck('name', 'id');
+                            })
+                            ->required()
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                \Log::info('Item selected:', [
+                                    'item_id' => $state,
+                                    'supplier_id' => $get('../../supplier_id')
+                                ]);
+                                
+                                if (!$state) {
+                                    $set('price', 0);
+                                    $set('unit_name', '');
+                                    $set('total', 0);
+                                    return;
+                                }
+                                
+                                $supplierId = $get('../../supplier_id');
+                                
+                                // First, let's check if we can find the item at all
+                                $item = Item::with('unit')->find($state);
+                                if (!$item) {
+                                    \Log::error('Item not found:', ['item_id' => $state]);
+                                    return;
+                                }
+                                
+                                \Log::info('Item loaded:', [
+                                    'item' => $item->toArray(),
+                                    'unit' => $item->unit ? $item->unit->toArray() : null
+                                ]);
+                                
+                                // Set unit name
+                                $unitName = $item->unit ? $item->unit->name : 'No unit';
+                                $set('unit_name', $unitName);
+                                \Log::info('Unit set to:', ['unit_name' => $unitName]);
+                                
+                                // Now let's try to get the price from pivot
+                                if ($supplierId) {
+                                    // Try direct DB query first
+                                    $pivotData = \DB::table('supplier_items')
+                                        ->where('supplier_id', $supplierId)
+                                        ->where('item_id', $state)
+                                        ->first();
+                                    
+                                    \Log::info('Pivot query result:', [
+                                        'pivot_data' => $pivotData ? (array)$pivotData : null
+                                    ]);
+                                    
+                                    if ($pivotData) {
+                                        // Check what columns are available
+                                        $columns = array_keys((array)$pivotData);
+                                        \Log::info('Available pivot columns:', ['columns' => $columns]);
+                                        
+                                        // Try different possible column names
+                                        $price = $pivotData->cost_price ?? $pivotData->price ?? 0;
+                                        \Log::info('Price found:', ['price' => $price]);
+                                        
+                                        $set('price', $price);
+                                        
+                                        // Calculate total
+                                        $quantity = floatval($get('quantity') ?? 1);
+                                        $total = $price * $quantity;
+                                        $set('total', $total);
+                                        
+                                        \Log::info('Total calculated:', [
+                                            'quantity' => $quantity,
+                                            'price' => $price,
+                                            'total' => $total
+                                        ]);
+                                    } else {
+                                        \Log::warning('No pivot data found');
+                                        $set('price', 0);
+                                        $set('total', 0);
+                                    }
+                                }
+                            })
+                            ->disabled(function (callable $get) {
+                                return !$get('../../supplier_id');
+                            })
+                            ->helperText(function (callable $get) {
+                                return !$get('../../supplier_id') ? 'Selecteer eerst een leverancier' : null;
+                            }),
+
+                        TextInput::make('quantity')
+                            ->label('Aantal')
+                            ->numeric()
+                            ->default(1)
+                            ->minValue(1)
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $price = $get('price') ?? 0;
+                                $quantity = floatval($state) ?: 1;
+                                $set('total', $price * $quantity);
+                            }),
+
+                        TextInput::make('unit_name')
+                            ->label('Eenheid')
+                            ->disabled()
+                            ->dehydrated(false),
+
+                        TextInput::make('price')
+                            ->label('Prijs')
+                            ->numeric()
+                            ->prefix('€')
+                            ->step(0.01)
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $quantity = $get('quantity') ?? 1;
+                                $price = floatval($state) ?: 0;
+                                $set('total', $price * $quantity);
+                            }),
+
+                        TextInput::make('total')
+                            ->label('Totaal')
+                            ->numeric()
+                            ->prefix('€')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->formatStateUsing(function ($state) {
+                                return number_format(floatval($state), 2, ',', '.');
+                            }),
+                    ])
+                    ->columnSpan('full')
+                    ->streamlined()
+                    ->renderHeader(true)
+                    ->addActionLabel('Item toevoegen')
+                    ->emptyLabel('Nog geen items toegevoegd aan deze bestelling.')
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        // Calculate grand total
+                        $grandTotal = 0;
+                        if (is_array($state)) {
+                            foreach ($state as $item) {
+                                $grandTotal += floatval($item['total'] ?? 0);
+                            }
+                        }
+                        $set('grand_total', $grandTotal);
+                    })
+                    ->extraActions([
+                        Forms\Components\Actions\Action::make('calculate_totals')
+                            ->label('Herbereken totalen')
+                            ->icon('heroicon-m-calculator')
+                            ->color('gray')
+                            ->action(function (callable $get, callable $set) {
+                                $orderItems = $get('orderItems') ?? [];
+                                $grandTotal = 0;
+                                
+                                foreach ($orderItems as $index => $item) {
+                                    $quantity = floatval($item['quantity'] ?? 1);
+                                    $price = floatval($item['price'] ?? 0);
+                                    $total = $quantity * $price;
+                                    
+                                    $orderItems[$index]['total'] = $total;
+                                    $grandTotal += $total;
+                                }
+                                
+                                $set('orderItems', $orderItems);
+                                $set('grand_total', $grandTotal);
+                                
+                                Notification::make()
+                                    ->title('Totalen herberekend')
+                                    ->success()
+                                    ->send();
+                            }),
+                    ]),
+
+                // Add this field after the TableRepeater to show the grand total
                 Forms\Components\Card::make()
                     ->schema([
-                        Forms\Components\Section::make('Bestelde Items')
-                            ->schema([
-                                Repeater::make('orderItems')
-                                    ->relationship('orderItems')
-                                    ->schema([
-                                        Forms\Components\Grid::make(2)
-                                            ->schema([
-                                                Select::make('item_id')
-                                                    ->label('Item')
-                                                    ->options(function (callable $get) {
-                                                        $supplierId = $get('../../supplier_id');
-                                                        if (!$supplierId) {
-                                                            return [];
-                                                        }
-                                                        
-                                                        return Item::whereHas('suppliers', function ($query) use ($supplierId) {
-                                                            $query->where('supplier_id', $supplierId);
-                                                        })
-                                                        ->with(['category', 'unit'])
-                                                        ->get()
-                                                        ->mapWithKeys(function ($item) {
-                                                            return [$item->id => $item->name . ' (' . $item->category->name . ')'];
-                                                        });
-                                                    })
-                                                    ->required()
-                                                    ->searchable(),
-                                                    
-                                                TextInput::make('quantity')
-                                                    ->label('Aantal')
-                                                    ->required()
-                                                    ->numeric()
-                                                    ->minValue(1)
-                                                    ->default(1),
-                                            ]),
-                                    ])
-                                    ->columns(2)
-                                    ->defaultItems(1)
-                                    ->addActionLabel('Item toevoegen')
-                                    ->collapsed(false),
+                        Forms\Components\Placeholder::make('grand_total_display')
+                            ->label('Totaal bestelling')
+                            ->content(function (callable $get) {
+                                $grandTotal = $get('grand_total') ?? 0;
+                                return '€ ' . number_format(floatval($grandTotal), 2, ',', '.');
+                            })
+                            ->extraAttributes([
+                                'class' => 'text-xl font-bold text-primary-600',
                             ]),
-                    ]),
+                            
+                        Forms\Components\Hidden::make('grand_total')
+                            ->default(0),
+                    ])
+                    ->columnSpan('full'),
                     
                 Forms\Components\Actions::make([
                     Forms\Components\Actions\Action::make('send_email')
@@ -289,6 +477,7 @@ class OrderResource extends Resource
                     ->options([
                         'pending' => 'In afwachting',
                         'confirmed' => 'Bevestigd',
+                        'sent' => 'Verstuurd',
                         'delivered' => 'Geleverd',
                         'cancelled' => 'Geannuleerd',
                     ]),
@@ -484,6 +673,7 @@ class OrderResource extends Resource
                                 return match ($state) {
                                     'pending' => 'warning',
                                     'confirmed' => 'success',
+                                    'sent' => 'info',
                                     'delivered' => 'primary',
                                     'cancelled' => 'danger',
                                     default => 'gray',
@@ -493,6 +683,7 @@ class OrderResource extends Resource
                                 return match ($state) {
                                     'pending' => 'In afwachting',
                                     'confirmed' => 'Bevestigd',
+                                    'sent' => 'Verstuurd',
                                     'delivered' => 'Geleverd',
                                     'cancelled' => 'Geannuleerd',
                                     default => $state,
