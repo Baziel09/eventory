@@ -58,7 +58,7 @@ class OrderResource extends Resource
                         Forms\Components\Grid::make(2)
                             ->schema([
                                 Select::make('vendor_id')
-                                    ->label('Verkoper')
+                                    ->label('Stand')
                                     ->options(Vendor::all()->pluck('name', 'id'))
                                     ->required()
                                     ->searchable(),
@@ -148,7 +148,7 @@ class OrderResource extends Resource
                     ->searchable(),
                     
                 TextColumn::make('vendor.name')
-                    ->label('Verkoper')
+                    ->label('Stand')
                     ->sortable()
                     ->searchable(),
                     
@@ -206,7 +206,7 @@ class OrderResource extends Resource
                     ]),
                     
                 SelectFilter::make('vendor_id')
-                    ->label('Verkoper')
+                    ->label('Stand')
                     ->options(Vendor::all()->pluck('name', 'id')),
                     
                 SelectFilter::make('supplier_id')
@@ -214,8 +214,10 @@ class OrderResource extends Resource
                     ->options(Supplier::all()->pluck('name', 'id')),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->label(''),
+                Tables\Actions\EditAction::make()
+                    ->label(''),
                 
                 Action::make('confirm')
                     ->label('Bevestigen')
@@ -247,7 +249,7 @@ class OrderResource extends Resource
                     }),
                     
                 Action::make('send_email')
-                    ->label('Verstuur naar leverancier')
+                    ->label('Verstuur')
                     ->icon('heroicon-o-envelope')
                     ->color('primary')
                     ->visible(fn (Order $record) => $record->status === 'confirmed')
@@ -281,6 +283,16 @@ class OrderResource extends Resource
                             ->label('PDF bijvoegen')
                             ->default(true)
                             ->helperText('Voegt automatisch een PDF van de bestelling toe als bijlage'),
+                        
+                        Forms\Components\Actions::make([
+                            Forms\Components\Actions\Action::make('preview_pdf')
+                                ->label('Voorbeeld PDF')
+                                ->icon('heroicon-o-eye')
+                                ->color('gray')
+                                ->url(fn (Order $record) => route('orders.preview.pdf', $record))
+                                ->openUrlInNewTab()
+                                ->visible(fn (Order $record) => true),
+                        ]),
                     ])
                     ->action(function (Order $record, array $data) {
                         try {
@@ -314,6 +326,7 @@ class OrderResource extends Resource
                                 ->send();
                         }
                     }),
+                    
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -333,7 +346,7 @@ class OrderResource extends Resource
                             ->label('Bestelnummer'),
                             
                         TextEntry::make('vendor.name')
-                            ->label('Verkoper'),
+                            ->label('Stand'),
                             
                         TextEntry::make('supplier.name')
                             ->label('Leverancier'),
@@ -406,7 +419,7 @@ class OrderResource extends Resource
             <p><strong>Bestelgegevens:</strong><br>
             Bestelnummer: #{$record->id}<br>
             Besteldatum: " . $record->ordered_at->format('d/m/Y H:i') . "<br>
-            Verkoper: {$record->vendor->name}</p>
+            Stand: {$record->vendor->name}</p>
             
             <p><strong>Bestelde items:</strong><br>
             {$itemsList}</p>

@@ -18,11 +18,11 @@ class OrderPdfService
         
         // Create temporary file
         $filename = 'order_' . $order->id . '_' . time() . '.pdf';
-        $path = storage_path('app/temp/' . $filename);
+        $path = storage_path('app/public/temp/' . $filename);
         
         // Make sure temp directory exists
-        if (!file_exists(storage_path('app/temp'))) {
-            mkdir(storage_path('app/temp'), 0755, true);
+        if (!file_exists(storage_path('app/public/temp'))) {
+            mkdir(storage_path('app/public/temp'), 0755, true);
         }
         
         // Save PDF to temporary location
