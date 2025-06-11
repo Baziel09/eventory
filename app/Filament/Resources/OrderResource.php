@@ -9,6 +9,7 @@ use App\Models\Vendor;
 use App\Models\Supplier;
 use App\Models\Item;
 use App\Models\OrderItem;
+
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -20,8 +21,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Components\RepeatableEntry;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -29,6 +28,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Section as FormSection;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
@@ -36,9 +36,16 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\VerticalAlignment;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderMail;
 use App\Services\OrderPdfService;
+// use Awcodes\TableRepeater\Components\TableRepeater;
+use Icetalker\FilamentTableRepeater\Forms\Components\TableRepeater;
+use Awcodes\TableRepeater\Header;
+
 
 class OrderResource extends Resource
 {
@@ -87,6 +94,7 @@ class OrderResource extends Resource
                                     ->options([
                                         'pending' => 'In afwachting',
                                         'confirmed' => 'Bevestigd',
+                                        'sent' => 'Verstuurd',
                                         'delivered' => 'Geleverd',
                                         'cancelled' => 'Geannuleerd',
                                     ])
@@ -94,50 +102,174 @@ class OrderResource extends Resource
                                     ->required(),
                             ]),
                     ]),
-                    
-                Forms\Components\Card::make()
+
+                TableRepeater::make('orderItems')
+                    ->label('Bestelde Items')
+                    ->relationship('orderItems')
                     ->schema([
-                        Forms\Components\Section::make('Bestelde Items')
-                            ->schema([
-                                Repeater::make('orderItems')
-                                    ->relationship('orderItems')
-                                    ->schema([
-                                        Forms\Components\Grid::make(2)
-                                            ->schema([
-                                                Select::make('item_id')
-                                                    ->label('Item')
-                                                    ->options(function (callable $get) {
-                                                        $supplierId = $get('../../supplier_id');
-                                                        if (!$supplierId) {
-                                                            return [];
-                                                        }
-                                                        
-                                                        return Item::whereHas('suppliers', function ($query) use ($supplierId) {
-                                                            $query->where('supplier_id', $supplierId);
-                                                        })
-                                                        ->with(['category', 'unit'])
-                                                        ->get()
-                                                        ->mapWithKeys(function ($item) {
-                                                            return [$item->id => $item->name . ' (' . $item->category->name . ')'];
-                                                        });
-                                                    })
-                                                    ->required()
-                                                    ->searchable(),
-                                                    
-                                                TextInput::make('quantity')
-                                                    ->label('Aantal')
-                                                    ->required()
-                                                    ->numeric()
-                                                    ->minValue(1)
-                                                    ->default(1),
-                                            ]),
-                                    ])
-                                    ->columns(2)
-                                    ->defaultItems(1)
-                                    ->addActionLabel('Item toevoegen')
-                                    ->collapsed(false),
-                            ]),
+                        Select::make('item_id')
+                            ->label('Item')
+                            ->options(function (callable $get) {
+                                $supplierId = $get('../../supplier_id');
+                                if (!$supplierId) {
+                                    return [];
+                                }
+                                
+                                // Get items that this supplier can provide
+                                return Item::whereHas('suppliers', function ($query) use ($supplierId) {
+                                    $query->where('supplier_id', $supplierId);
+                                })->with(['category', 'unit'])->get()
+                                ->mapWithKeys(function ($item) {
+                                    return [$item->id => "{$item->name} ({$item->category->name}) - {$item->unit->name}"];
+                                });
+                            })
+                            ->required()
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                // Reset quantity when item changes
+                                $set('quantity', null);
+                                
+                                // Get cost price from pivot table
+                                $supplierId = $get('../../supplier_id');
+                                if ($state && $supplierId) {
+                                    $supplierItem = \DB::table('supplier_item')
+                                        ->where('supplier_id', $supplierId)
+                                        ->where('item_id', $state)
+                                        ->first();
+                                    
+                                    if ($supplierItem) {
+                                        $set('cost_price', $supplierItem->cost_price);
+                                    }
+                                }
+                                
+                                // Get unit name from item
+                                $item = Item::find($state);
+                                if ($item) {
+                                    $set('unit_name', $item->unit->name);
+                                }
+                            })
+                            ->disabled(fn (callable $get) => !$get('../../supplier_id')),
+                            
+                        TextInput::make('quantity')
+                            ->label('Aantal')
+                            ->numeric()
+                            ->minValue(1)
+                            ->step(1)
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                // Calculate line total when quantity changes
+                                $costPrice = $get('cost_price');
+                                if ($state && $costPrice) {
+                                    $set('line_total', $state * $costPrice);
+                                }
+                            }),
+                            
+                        TextInput::make('cost_price')
+                            ->label('Kostprijs')
+                            ->numeric()
+                            ->step(0.01)
+                            ->prefix('€')
+                            ->disabled()
+                            ->dehydrated(false), // Don't save this field
+                            
+                        TextInput::make('unit_name')
+                            ->label('Eenheid')
+                            ->disabled()
+                            ->dehydrated(false) // Don't save this field
+                            ->afterStateHydrated(function ($component, $state, $record) {
+                                if ($record && $record->item) {
+                                    $component->state($record->item->unit->name ?? '');
+                                }
+                            }),
+                            
+                        TextInput::make('line_total')
+                            ->label('Totaal')
+                            ->numeric()
+                            ->step(0.01)
+                            ->prefix('€')
+                            ->disabled()
+                            ->dehydrated(false), // Don't save this field
+                    ])
+                    ->columnSpan('full')
+                    ->reorderable(false)
+                    ->cloneable()
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => 
+                        isset($state['item_id']) ? Item::find($state['item_id'])?->name : 'Nieuw item'
+                    )
+                    ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                        // Only save the fields that should be persisted
+                        return [
+                            'item_id' => $data['item_id'],
+                            'quantity' => $data['quantity'],
+                        ];
+                    })
+                    ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                        // Only save the fields that should be persisted
+                        return [
+                            'item_id' => $data['item_id'],
+                            'quantity' => $data['quantity'],
+                        ];
+                    })
+                    ->afterStateHydrated(function ($component, $state, $record) {
+                        // Populate calculated fields when editing
+                        if ($record && $record->orderItems) {
+                            $supplierId = $record->supplier_id;
+                            $hydratedState = [];
+                            
+                            foreach ($record->orderItems as $index => $orderItem) {
+                                $itemData = [
+                                    'item_id' => $orderItem->item_id,
+                                    'quantity' => $orderItem->quantity,
+                                    'unit_name' => $orderItem->item->unit->name ?? '',
+                                ];
+                                
+                                // Get cost price from pivot
+                                $supplierItem = \DB::table('supplier_item')
+                                    ->where('supplier_id', $supplierId)
+                                    ->where('item_id', $orderItem->item_id)
+                                    ->first();
+                                
+                                if ($supplierItem) {
+                                    $itemData['cost_price'] = $supplierItem->cost_price;
+                                    $itemData['line_total'] = $orderItem->quantity * $supplierItem->cost_price;
+                                }
+                                
+                                $hydratedState[] = $itemData;
+                            }
+                            
+                            $component->state($hydratedState);
+                        }
+                    })
+                    ->colStyles([
+                        'item_id' => 'width: 40%;',
+                        'quantity' => 'width: 15%;',
+                        'cost_price' => 'width: 15%;',
+                        'unit_name' => 'width: 15%;',
+                        'line_total' => 'width: 15%;',
                     ]),
+
+                // Add total calculation section
+                Forms\Components\Section::make('Totaal')
+                    ->schema([
+                        Forms\Components\Placeholder::make('total_amount')
+                            ->label('Totaalbedrag')
+                            ->content(function (callable $get) {
+                                $orderItems = $get('orderItems') ?? [];
+                                $total = 0;
+                                
+                                foreach ($orderItems as $item) {
+                                    if (isset($item['line_total']) && is_numeric($item['line_total'])) {
+                                        $total += $item['line_total'];
+                                    }
+                                }
+                                
+                                return '€ ' . number_format($total, 2, ',', '.');
+                            }),
+                    ])
+                    ->columnSpan('full'),
                     
                 Forms\Components\Actions::make([
                     Forms\Components\Actions\Action::make('send_email')
@@ -289,6 +421,7 @@ class OrderResource extends Resource
                     ->options([
                         'pending' => 'In afwachting',
                         'confirmed' => 'Bevestigd',
+                        'sent' => 'Verstuurd',
                         'delivered' => 'Geleverd',
                         'cancelled' => 'Geannuleerd',
                     ]),
@@ -484,6 +617,7 @@ class OrderResource extends Resource
                                 return match ($state) {
                                     'pending' => 'warning',
                                     'confirmed' => 'success',
+                                    'sent' => 'info',
                                     'delivered' => 'primary',
                                     'cancelled' => 'danger',
                                     default => 'gray',
@@ -493,6 +627,7 @@ class OrderResource extends Resource
                                 return match ($state) {
                                     'pending' => 'In afwachting',
                                     'confirmed' => 'Bevestigd',
+                                    'sent' => 'Verstuurd',
                                     'delivered' => 'Geleverd',
                                     'cancelled' => 'Geannuleerd',
                                     default => $state,

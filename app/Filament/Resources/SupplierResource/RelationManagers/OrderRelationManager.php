@@ -49,6 +49,7 @@ class OrderRelationManager extends RelationManager
                             ->options([
                                 'pending' => 'In afwachting',
                                 'confirmed' => 'Bevestigd',
+                                'sent' => 'Verstuurd',
                                 'delivered' => 'Geleverd',
                                 'cancelled' => 'Geannuleerd',
                             ])
@@ -113,12 +114,14 @@ class OrderRelationManager extends RelationManager
                     ->colors([
                         'warning' => 'pending',
                         'success' => 'confirmed',
+                        'info' => 'sent',
                         'primary' => 'delivered',
                         'danger' => 'cancelled',
                     ])
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'pending' => 'In afwachting',
                         'confirmed' => 'Bevestigd',
+                        'sent' => 'Verstuurd',
                         'delivered' => 'Geleverd',
                         'cancelled' => 'Geannuleerd',
                         default => $state,
@@ -130,6 +133,7 @@ class OrderRelationManager extends RelationManager
                     ->options([
                         'pending' => 'In afwachting',
                         'confirmed' => 'Bevestigd',
+                        'sent' => 'Verstuurd',
                         'delivered' => 'Geleverd',
                         'cancelled' => 'Geannuleerd',
                     ]),
