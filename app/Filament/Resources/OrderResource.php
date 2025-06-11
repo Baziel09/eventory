@@ -28,11 +28,14 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
+use Filament\Support\Enums\VerticalAlignment;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderMail;
 use App\Services\OrderPdfService;
@@ -41,7 +44,7 @@ class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static ?string $navigationIcon = 'heroicon-o-envelope';
     
     protected static ?string $navigationLabel = 'Bestellingen';
     
@@ -135,6 +138,91 @@ class OrderResource extends Resource
                                     ->collapsed(false),
                             ]),
                     ]),
+                    
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('send_email')
+                        ->label('Verstuur naar leverancier')
+                        ->icon('heroicon-o-envelope')
+                        ->color('primary')
+                        ->visible(fn (Order $record) => $record->status === 'confirmed')
+                        ->form([
+                            TextInput::make('subject')
+                                ->label('Onderwerp')
+                                ->default(fn (Order $record) => "Bestelling #{$record->id} - {$record->vendor->name}")
+                                ->required(),
+                                
+                            RichEditor::make('message')
+                                ->label('Bericht')
+                                ->default(function (Order $record) {
+                                    return self::getDefaultEmailTemplate($record);
+                                })
+                                ->required()
+                                ->toolbarButtons([
+                                    'bold',
+                                    'italic',
+                                    'underline',
+                                    'strike',
+                                    'bulletList',
+                                    'orderedList',
+                                    'h2',
+                                    'h3',
+                                    'link',
+                                    'undo',
+                                    'redo',
+                                ]),
+                                
+                            Forms\Components\Toggle::make('include_pdf')
+                                ->label('PDF bijvoegen')
+                                ->default(true)
+                                ->helperText('Voegt automatisch een PDF van de bestelling toe als bijlage'),
+                            
+                            Forms\Components\Actions::make([
+                                Forms\Components\Actions\Action::make('preview_pdf')
+                                    ->label('Voorbeeld PDF')
+                                    ->icon('heroicon-o-eye')
+                                    ->color('gray')
+                                    ->url(fn (Order $record) => route('orders.preview.pdf', $record))
+                                    ->openUrlInNewTab()
+                                    ->visible(fn (Order $record) => true),
+                            ]),
+                        ])
+                        ->action(function (Order $record, array $data) {
+                            try {
+                                // Generate PDF if requested
+                                $pdfPath = null;
+                                if ($data['include_pdf']) {
+                                    $pdfService = new OrderPdfService();
+                                    $pdfPath = $pdfService->generateOrderPdf($record);
+                                }
+                                
+                                // Send email
+                                Mail::to($record->supplier->contact_email)
+                                    ->send(new OrderMail($record, $data['subject'], $data['message'], $pdfPath));
+                                
+                                // Clean up temporary PDF file
+                                if ($pdfPath && file_exists($pdfPath)) {
+                                    unlink($pdfPath);
+                                }
+
+                                // Update status
+                                $record->status = 'sent';
+                                $record->save();
+                                
+                                Notification::make()
+                                    ->title('Email verstuurd')
+                                    ->body("De bestelling is verstuurd naar {$record->supplier->name} ({$record->supplier->contact_email})")
+                                    ->success()
+                                    ->send();
+                                    
+                            } catch (\Exception $e) {
+                                Notification::make()
+                                    ->title('Fout bij versturen email')
+                                    ->body('Er is een fout opgetreden: ' . $e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ])
             ]);
     }
 
@@ -204,6 +292,19 @@ class OrderResource extends Resource
                         'delivered' => 'Geleverd',
                         'cancelled' => 'Geannuleerd',
                     ]),
+
+                Filter::make('show_cancelled')
+                    ->label('Geannuleerde tonen')
+                    ->form([
+                        Toggle::make('value')
+                            ->label('Toon geannuleerde bestellingen')
+                            ->default(false),
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        if (!($data['value'] ?? false)) {
+                            $query->where('status', '!=', 'cancelled');
+                        }
+                    }),
                     
                 SelectFilter::make('vendor_id')
                     ->label('Stand')
@@ -311,6 +412,10 @@ class OrderResource extends Resource
                             if ($pdfPath && file_exists($pdfPath)) {
                                 unlink($pdfPath);
                             }
+
+                            // Update status
+                                $record->status = 'sent';
+                                $record->save();
                             
                             Notification::make()
                                 ->title('Email verstuurd')
@@ -325,6 +430,20 @@ class OrderResource extends Resource
                                 ->danger()
                                 ->send();
                         }
+                    }),
+                    
+                Action::make('mark_as_delivered')
+                    ->label('Geleverd')
+                    ->icon('heroicon-o-truck')
+                    ->color('success')
+                    ->visible(fn (Order $record) => $record->status === 'confirmed')
+                    ->action(function (Order $record) {
+                        $record->update(['status' => 'delivered']);
+                        
+                        Notification::make()
+                            ->title('Bestelling geleverd')
+                            ->success()
+                            ->send();
                     }),
                     
             ])
