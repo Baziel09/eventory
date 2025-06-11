@@ -10,6 +10,12 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Resources\VendorResource\RelationManagers;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class VendorResource extends Resource
 {
@@ -50,12 +56,28 @@ class VendorResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Naam')->searchable(),
-                Tables\Columns\TextColumn::make('email')->label('E-mail')->searchable(),
-                Tables\Columns\TextColumn::make('phone')->label('Telefoon'),
-                Tables\Columns\TextColumn::make('event.name')->label('Festival'),
-                Tables\Columns\TextColumn::make('location.name')->label('Locatie'),
-                Tables\Columns\TextColumn::make('created_at')->label('Aangemaakt')->dateTime(),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Naam')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('email')
+                    ->label('E-mail')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('phone')
+                    ->label('Telefoon'),
+                Tables\Columns\TextColumn::make('event.name')
+                    ->label('Festival')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('location.name')
+                    ->label('Locatie'),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Aangemaakt')->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('event')->relationship('event', 'name'),
+                Tables\Filters\SelectFilter::make('location')->relationship('location', 'name'),
+
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -64,8 +86,14 @@ class VendorResource extends Resource
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
+            
     }
-
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\ItemRelationManager::class,
+        ];
+    }
     public static function getPages(): array
     {
         return [
