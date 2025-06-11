@@ -19,6 +19,10 @@ class Order extends Model
         'status',
     ];
 
+    protected $casts = [
+        'ordered_at' => 'datetime',
+    ];
+
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
