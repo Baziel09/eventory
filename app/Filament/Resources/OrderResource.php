@@ -15,8 +15,10 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -366,22 +368,24 @@ class OrderResource extends Resource
                             }),
                     ])
                     ->columns(2),
-                    
+
                 Section::make('Bestelde Items')
                     ->schema([
-                        RepeatableEntry::make('orderItems')
+                        Grid::make(4)
                             ->schema([
-                                TextEntry::make('item.name')
-                                    ->label('Item'),
-                                    
-                                TextEntry::make('item.category.name')
-                                    ->label('Categorie'),
-                                    
-                                TextEntry::make('quantity')
-                                    ->label('Aantal'),
-                                    
-                                TextEntry::make('item.unit.name')
-                                    ->label('Eenheid'),
+                                TextEntry::make('')->label('Item')->placeholder('')->columnSpan(1),
+                                TextEntry::make('')->label('Categorie')->placeholder('')->columnSpan(1),
+                                TextEntry::make('')->label('Aantal')->placeholder('')->columnSpan(1),
+                                TextEntry::make('')->label('Eenheid')->placeholder('')->columnSpan(1),
+                            ]),
+
+                        RepeatableEntry::make('orderItems')
+                            ->label('')
+                            ->schema([
+                                TextEntry::make('item.name')->label(''),
+                                TextEntry::make('item.category.name')->label(''),
+                                TextEntry::make('quantity')->label(''),
+                                TextEntry::make('item.unit.name')->label(''),
                             ])
                             ->columns(4),
                     ]),
