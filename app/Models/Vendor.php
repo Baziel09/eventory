@@ -39,4 +39,10 @@ class Vendor extends Model
     {
         return $this->belongsTo(Location::class);
     }
+    public function items()
+    {
+        return $this->belongsToMany(Item::class, 'vendor_item', 'vendor_id', 'item_id')->withPivot('cost_price');
+    }
 }
+    
+
