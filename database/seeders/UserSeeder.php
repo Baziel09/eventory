@@ -12,26 +12,31 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::factory()->Create([
-            'name' => 'Admin',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-        ]);
-        $user->assignRole('admin');
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $admin->assignRole('admin');
         
-        $voorraadUser = User::factory()->Create([
-            'name' => 'Voorraad Beheerder',
-            'email' => 'voorraad@example.com',
-            'password' => bcrypt('password'),
-        ]);
-
+        $voorraadUser = User::firstOrCreate(
+            ['email' => 'voorraad@example.com'],
+            [
+                'name' => 'Voorraad Beheerder',
+                'password' => bcrypt('password'),
+            ]
+        );
         $voorraadUser->assignRole('voorraadbeheerder');
         
-        $vrijwilligerUser = User::factory()->Create([
-            'name' => 'Vrijwilliger',
-            'email' => 'vrijwilliger@example.com',
-            'password' => bcrypt('password'),
-        ]);
+        $vrijwilligerUser = User::firstOrCreate(
+            ['email' => 'vrijwilliger@example.com'],
+            [
+                'name' => 'Vrijwilliger',
+                'password' => bcrypt('password'),
+            ]
+        );
         $vrijwilligerUser->assignRole('vrijwilliger');
     }
 }

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use App\Models\Category;
 
 class CategoriesTableSeeder extends Seeder
 {
@@ -26,7 +27,7 @@ class CategoriesTableSeeder extends Seeder
         ];
 
         foreach ($categories as $category) {
-            App\Models\Category::firstOrCreate(['name' => $category['name']], $category);
+            Category::firstOrCreate(['name' => $category['name']], $category);
         }
     }
 }
