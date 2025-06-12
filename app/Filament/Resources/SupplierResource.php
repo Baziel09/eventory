@@ -20,6 +20,8 @@ class SupplierResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
+    protected static ?string $label = 'Leveranciers';
+
     public static function form(Form $form): Form
     {
         return $form
