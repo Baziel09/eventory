@@ -85,6 +85,15 @@
         .items-table th {
             background-color: #f5f5f5;
             font-weight: bold;
+            text-align: left;
+        }
+
+        .items-table td {
+            text-align: left;
+        }
+
+        .items-table td.number {
+            text-align: right;
         }
 
         .status-badge {
@@ -109,6 +118,18 @@
             margin-top: 40px;
             padding-top: 15px;
         }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #f5f5f5;
+        }
+
+        .grand-total {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -132,7 +153,6 @@
                 @endswitch
             </span>
         </p>
-
     </div>
 
     <div class="section details-row">
@@ -164,19 +184,47 @@
                     <th>Categorie</th>
                     <th>Aantal</th>
                     <th>Eenheid</th>
+                    <th class="number">Prijs per eenheid</th>
+                    <th class="number">Totaal</th>
                 </tr>
             </thead>
             <tbody>
+                @php
+                    $grandTotal = 0;
+                @endphp
+                
                 @foreach($order->orderItems as $orderItem)
+                    @php
+                        // Get cost price from pivot table
+                        $costPrice = DB::table('supplier_item')
+                            ->where('supplier_id', $order->supplier_id)
+                            ->where('item_id', $orderItem->item_id)
+                            ->value('cost_price');
+                        
+                        $lineTotal = $costPrice * $orderItem->quantity;
+                        $grandTotal += $lineTotal;
+                    @endphp
+                    
                     <tr>
                         <td>{{ $orderItem->item->name }}</td>
                         <td>{{ $orderItem->item->category->name ?? '-' }}</td>
                         <td>{{ $orderItem->quantity }}</td>
                         <td>{{ $orderItem->item->unit->name ?? '-' }}</td>
+                        <td class="number">€ {{ number_format($costPrice, 2, ',', '.') }}</td>
+                        <td class="number">€ {{ number_format($lineTotal, 2, ',', '.') }}</td>
                     </tr>
                 @endforeach
+                
+                <tr class="total-row">
+                    <td colspan="5" class="number">Totaal:</td>
+                    <td class="number">€ {{ number_format($grandTotal, 2, ',', '.') }}</td>
+                </tr>
             </tbody>
         </table>
+        
+        <div class="grand-total">
+            Totaalbedrag: € {{ number_format($grandTotal, 2, ',', '.') }}
+        </div>
     </div>
 
     <div class="section">

@@ -256,6 +256,9 @@ class OrderResource extends Resource
                     ->schema([
                         Forms\Components\Placeholder::make('total_amount')
                             ->label('Totaalbedrag')
+                            ->extraAttributes([
+                                'class' => 'text-xl font-bold text-primary-600',
+                            ])
                             ->content(function (callable $get) {
                                 $orderItems = $get('orderItems') ?? [];
                                 $total = 0;
@@ -272,11 +275,40 @@ class OrderResource extends Resource
                     ->columnSpan('full'),
                     
                 Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('confirm')
+                        ->label('Bevestigen')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                       ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'pending')
+                        ->action(function (Order $record) {
+                            $record->update(['status' => 'confirmed']); 
+                            
+                            Notification::make()
+                                ->title('Bestelling bevestigd')
+                                ->success()
+                                ->send();
+                        }),
+
+                    Forms\Components\Actions\Action::make('cancel')
+                        ->label('Annuleren')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->visible(fn (?Order $record) => $record && $record->exists && in_array($record->status, ['pending', 'confirmed']))
+                        ->requiresConfirmation()
+                        ->action(function (Order $record) {
+                            $record->update(['status' => 'cancelled']);
+                            
+                            Notification::make()
+                                ->title('Bestelling geannuleerd')
+                                ->success()
+                                ->send();
+                        }),
+                    
                     Forms\Components\Actions\Action::make('send_email')
                         ->label('Verstuur naar leverancier')
                         ->icon('heroicon-o-envelope')
                         ->color('primary')
-                        ->visible(fn (Order $record) => $record->status === 'confirmed')
+                        ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'confirmed')
                         ->form([
                             TextInput::make('subject')
                                 ->label('Onderwerp')
@@ -353,6 +385,20 @@ class OrderResource extends Resource
                                     ->danger()
                                     ->send();
                             }
+                        }),
+
+                    Forms\Components\Actions\Action::make('deliver')
+                        ->label('Bevestig levering')
+                        ->icon('heroicon-o-truck')
+                        ->color('success')
+                        ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'sent')
+                        ->action(function (Order $record) {
+                            $record->update(['status' => 'delivered']);
+                            
+                            Notification::make()
+                                ->title('Bestelling geleverd')
+                                ->success()
+                                ->send();
                         }),
                 ])
             ]);
