@@ -278,7 +278,7 @@ class OrderResource extends Resource
                     Forms\Components\Actions\Action::make('confirm')
                         ->label('Bevestigen')
                         ->icon('heroicon-o-check-circle')
-                        ->color('success')
+                        ->color('emerald')
                        ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'pending')
                         ->action(function (Order $record) {
                             $record->update(['status' => 'confirmed']); 
@@ -292,7 +292,7 @@ class OrderResource extends Resource
                     Forms\Components\Actions\Action::make('cancel')
                         ->label('Annuleren')
                         ->icon('heroicon-o-x-circle')
-                        ->color('danger')
+                        ->color('red')
                         ->visible(fn (?Order $record) => $record && $record->exists && in_array($record->status, ['pending', 'confirmed']))
                         ->requiresConfirmation()
                         ->action(function (Order $record) {
@@ -307,7 +307,7 @@ class OrderResource extends Resource
                     Forms\Components\Actions\Action::make('send_email')
                         ->label('Verstuur naar leverancier')
                         ->icon('heroicon-o-envelope')
-                        ->color('primary')
+                        ->color('blue')
                         ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'confirmed')
                         ->form([
                             TextInput::make('subject')
@@ -390,7 +390,7 @@ class OrderResource extends Resource
                     Forms\Components\Actions\Action::make('deliver')
                         ->label('Bevestig levering')
                         ->icon('heroicon-o-truck')
-                        ->color('success')
+                        ->color('green')
                         ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'sent')
                         ->action(function (Order $record) {
                             $record->update(['status' => 'delivered']);
@@ -431,10 +431,11 @@ class OrderResource extends Resource
                 BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
-                        'warning' => 'pending',
-                        'success' => 'confirmed',
-                        'primary' => 'delivered',
-                        'danger' => 'cancelled',
+                        'amber' => 'pending',
+                        'emerald' => 'confirmed',
+                        'blue' => 'sent',
+                        'green' => 'delivered',
+                        'red' => 'cancelled',
                     ])
                     ->formatStateUsing(function ($state) {
                         return match ($state) {
@@ -464,6 +465,7 @@ class OrderResource extends Resource
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
+                    ->multiple()
                     ->options([
                         'pending' => 'In afwachting',
                         'confirmed' => 'Bevestigd',
@@ -502,7 +504,7 @@ class OrderResource extends Resource
                 Action::make('confirm')
                     ->label('Bevestigen')
                     ->icon('heroicon-o-check-circle')
-                    ->color('success')
+                    ->color('emerald')
                     ->visible(fn (Order $record) => $record->status === 'pending')
                     ->action(function (Order $record) {
                         $record->update(['status' => 'confirmed']);
@@ -516,7 +518,7 @@ class OrderResource extends Resource
                 Action::make('cancel')
                     ->label('Annuleren')
                     ->icon('heroicon-o-x-circle')
-                    ->color('danger')
+                    ->color('red')
                     ->visible(fn (Order $record) => in_array($record->status, ['pending', 'confirmed']))
                     ->requiresConfirmation()
                     ->action(function (Order $record) {
@@ -531,7 +533,7 @@ class OrderResource extends Resource
                 Action::make('send_email')
                     ->label('Verstuur')
                     ->icon('heroicon-o-envelope')
-                    ->color('primary')
+                    ->color('blue')
                     ->visible(fn (Order $record) => $record->status === 'confirmed')
                     ->form([
                         TextInput::make('subject')
@@ -614,8 +616,8 @@ class OrderResource extends Resource
                 Action::make('mark_as_delivered')
                     ->label('Geleverd')
                     ->icon('heroicon-o-truck')
-                    ->color('success')
-                    ->visible(fn (Order $record) => $record->status === 'confirmed')
+                    ->color('green')
+                    ->visible(fn (Order $record) => $record->status === 'sent')
                     ->action(function (Order $record) {
                         $record->update(['status' => 'delivered']);
                         
@@ -628,7 +630,17 @@ class OrderResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    // cancel bulk action
+                    Tables\Actions\BulkAction::make('cancel')
+                        ->label('Annuleren')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('red')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            foreach ($records as $record) {
+                                $record->update(['status' => 'cancelled']);
+                            }
+                        })
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -659,26 +671,15 @@ class OrderResource extends Resource
                         TextEntry::make('status')
                             ->label('Status')
                             ->badge()
-                            ->color(function ($state) {
-                                return match ($state) {
-                                    'pending' => 'warning',
-                                    'confirmed' => 'success',
-                                    'sent' => 'info',
-                                    'delivered' => 'primary',
-                                    'cancelled' => 'danger',
+                            ->color(fn ($state): string => match (strtolower($state))  {
+                                    'amber' => 'pending',
+                                    'emerald' => 'confirmed',
+                                    'blue' => 'sent',
+                                    'green' => 'delivered',
+                                    'red' => 'cancelled',
                                     default => 'gray',
-                                };
-                            })
-                            ->formatStateUsing(function ($state) {
-                                return match ($state) {
-                                    'pending' => 'In afwachting',
-                                    'confirmed' => 'Bevestigd',
-                                    'sent' => 'Verstuurd',
-                                    'delivered' => 'Geleverd',
-                                    'cancelled' => 'Geannuleerd',
-                                    default => $state,
-                                };
-                            }),
+                                }),
+                         
                     ])
                     ->columns(2),
 
