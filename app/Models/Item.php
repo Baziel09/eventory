@@ -52,5 +52,11 @@ class Item extends Model
             ->withPivot('quantity')
             ->withTimestamps();
     }
-
+    public function vendors()
+    {
+        return $this->belongsToMany(Vendor::class, 'vendor_item_stock')
+            ->withPivot('quantity')
+            ->withPivot('vendor_id')
+            ->withPivot('item_id');
+    }
 }
