@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\SupplierResource\Pages;
-use App\Filament\Resources\SupplierResource\RelationManagers;
-use App\Models\Supplier;
+use App\Filament\Resources\DeliveryResource\Pages;
+use App\Filament\Resources\DeliveryResource\RelationManagers;
+use App\Models\Delivery;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,35 +12,33 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Resources\RelationManagers\RelationGroup;
 
-class SupplierResource extends Resource
+class DeliveryResource extends Resource
 {
-    protected static ?string $model = Supplier::class;
+    protected static ?string $model = Delivery::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static ?string $navigationIcon = 'heroicon-o-truck';
 
-    protected static ?string $activeNavigationIcon = 'heroicon-s-shopping-cart';  
+    protected static ?string $activeNavigationIcon = 'heroicon-s-truck';   
 
     protected static ?string $navigationGroup = 'Inkoop & Leveringen';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationLabel = 'Leveringen';
 
-    protected static ?string $label = 'Leveranciers';
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('contact_email')
-                    ->email()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('contact_phone')
-                    ->tel()
-                    ->maxLength(255),
+                Forms\Components\Select::make('order_id')
+                    ->relationship('order', 'id')
+                    ->required(),
+                Forms\Components\DateTimePicker::make('delivered_at'),
+                Forms\Components\select::make('user_id')
+                    ->label('Geaccepteerd door:')
+                    ->relationship('user', 'name')
+                    ->required(),
             ]);
     }
 
@@ -48,12 +46,15 @@ class SupplierResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('contact_email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('contact_phone')
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('order.id')
+                    ->numeric()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('delivered_at')
+                    ->dateTime()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('user_id')
+                    ->numeric()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -72,9 +73,6 @@ class SupplierResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -88,21 +86,16 @@ class SupplierResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\ItemRelationManager::class,
-            RelationManagers\OrderRelationManager::class,
-            // RelationManagers\DeliveriesRelationManager::class,
-                // ->canSee(function (): bool {
-                //     return auth()->user()->hasRole('admin');
-                // }),
+            //
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSuppliers::route('/'),
-            'create' => Pages\CreateSupplier::route('/create'),
-            'edit' => Pages\EditSupplier::route('/{record}/edit'),
+            'index' => Pages\ListDeliveries::route('/'),
+            'create' => Pages\CreateDelivery::route('/create'),
+            'edit' => Pages\EditDelivery::route('/{record}/edit'),
         ];
     }
 

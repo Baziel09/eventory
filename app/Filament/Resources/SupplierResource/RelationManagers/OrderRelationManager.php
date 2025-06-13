@@ -59,10 +59,10 @@ class OrderRelationManager extends RelationManager
 
                 Repeater::make('orderItems')
                     ->relationship('orderItems')
-                    ->label('Items')
+                    ->label('Producten')
                     ->schema([
                         Select::make('item_id')
-                            ->label('Item')
+                            ->label('Product')
                             ->options(function (callable $get) {
                                 $supplierId = $this->getOwnerRecord()->id;
                                 if (!$supplierId) return [];
@@ -86,7 +86,7 @@ class OrderRelationManager extends RelationManager
                     ])
                     ->columns(2)
                     ->defaultItems(1)
-                    ->addActionLabel('Item toevoegen'),
+                    ->addActionLabel('Product toevoegen'),
             ]);
     }
 
@@ -152,7 +152,12 @@ class OrderRelationManager extends RelationManager
                     }),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                Tables\Actions\Action::make('new_order')
+                    ->label('Nieuwe bestelling')
+                    ->icon('heroicon-o-plus')
+                    ->url(fn () => route('filament.admin.resources.orders.create', [
+                        'supplier_id' => $this->getOwnerRecord()->id
+                    ]))
             ])
             ->actions([
                 // Tables\Actions\EditAction::make()

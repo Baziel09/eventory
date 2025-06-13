@@ -40,7 +40,9 @@ use Filament\Support\Enums\VerticalAlignment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Collection;
 use App\Mail\OrderMail;
+use App\Mail\ConsolidatedOrderMail;
 use App\Services\OrderPdfService;
 // use Awcodes\TableRepeater\Components\TableRepeater;
 use Icetalker\FilamentTableRepeater\Forms\Components\TableRepeater;
@@ -52,8 +54,26 @@ class OrderResource extends Resource
     protected static ?string $model = Order::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
+
+    protected static ?string $activeNavigationIcon = 'heroicon-s-envelope'; 
     
     protected static ?string $navigationLabel = 'Bestellingen';
+
+    protected static ?string $navigationGroup = 'Inkoop & Leveringen';
+
+    protected static ?int $navigationSort = 3;
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::where('status', 'pending')->count();
+    }
+
+    protected static ?string $navigationBadgeTooltip = 'Bestellingen in afwachting';
+
+    public static function getNavigationBadgeColor(): ?string 
+    {
+        return static::getModel()::where('status', 'pending')->count() > 10 ? 'danger' : 'warning';
+    }
     
     protected static ?string $modelLabel = 'Bestelling';
     
@@ -79,9 +99,15 @@ class OrderResource extends Resource
                                     ->required()
                                     ->searchable()
                                     ->reactive()
-                                    ->afterStateUpdated(function ($state, callable $set) {
-                                        // Reset order items when supplier changes
-                                        $set('orderItems', []);
+                                    ->default(function () {
+                                        // Pre-fill supplier_id from URL parameter
+                                        return request()->query('supplier_id');
+                                    })
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        $prefilledItemId = request()->query('item_id');
+                                        if (!$prefilledItemId) {
+                                            $set('orderItems', []);
+                                        }
                                     }),
                                     
                                 DateTimePicker::make('ordered_at')
@@ -108,7 +134,7 @@ class OrderResource extends Resource
                     ->relationship('orderItems')
                     ->schema([
                         Select::make('item_id')
-                            ->label('Item')
+                            ->label('Product')
                             ->options(function (callable $get) {
                                 $supplierId = $get('../../supplier_id');
                                 if (!$supplierId) {
@@ -214,6 +240,38 @@ class OrderResource extends Resource
                         ];
                     })
                     ->afterStateHydrated(function ($component, $state, $record) {
+                        // Handle pre-filling from URL parameters (for new records)
+                        if (!$record || !$record->exists) {
+                            $itemId = request()->query('item_id');
+                            if ($itemId) {
+                                $supplierId = request()->query('supplier_id');
+                                
+                                // Create initial item entry
+                                $initialItem = ['item_id' => $itemId, 'quantity' => 1];
+                                
+                                // Get cost price and unit if supplier is set
+                                if ($supplierId) {
+                                    $supplierItem = \DB::table('supplier_item')
+                                        ->where('supplier_id', $supplierId)
+                                        ->where('item_id', $itemId)
+                                        ->first();
+                                    
+                                    if ($supplierItem) {
+                                        $initialItem['cost_price'] = $supplierItem->cost_price;
+                                        $initialItem['line_total'] = $supplierItem->cost_price;
+                                    }
+                                    
+                                    $item = Item::find($itemId);
+                                    if ($item) {
+                                        $initialItem['unit_name'] = $item->unit->name;
+                                    }
+                                }
+                                
+                                $component->state([$initialItem]);
+                                return;
+                            }
+                        }
+
                         // Populate calculated fields when editing
                         if ($record && $record->orderItems) {
                             $supplierId = $record->supplier_id;
@@ -273,134 +331,6 @@ class OrderResource extends Resource
                             }),
                     ])
                     ->columnSpan('full'),
-                    
-                Forms\Components\Actions::make([
-                    Forms\Components\Actions\Action::make('confirm')
-                        ->label('Bevestigen')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('emerald')
-                       ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'pending')
-                        ->action(function (Order $record) {
-                            $record->update(['status' => 'confirmed']); 
-                            
-                            Notification::make()
-                                ->title('Bestelling bevestigd')
-                                ->success()
-                                ->send();
-                        }),
-
-                    Forms\Components\Actions\Action::make('cancel')
-                        ->label('Annuleren')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('red')
-                        ->visible(fn (?Order $record) => $record && $record->exists && in_array($record->status, ['pending', 'confirmed']))
-                        ->requiresConfirmation()
-                        ->action(function (Order $record) {
-                            $record->update(['status' => 'cancelled']);
-                            
-                            Notification::make()
-                                ->title('Bestelling geannuleerd')
-                                ->success()
-                                ->send();
-                        }),
-                    
-                    Forms\Components\Actions\Action::make('send_email')
-                        ->label('Verstuur naar leverancier')
-                        ->icon('heroicon-o-envelope')
-                        ->color('blue')
-                        ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'confirmed')
-                        ->form([
-                            TextInput::make('subject')
-                                ->label('Onderwerp')
-                                ->default(fn (Order $record) => "Bestelling #{$record->id} - {$record->vendor->name}")
-                                ->required(),
-                                
-                            RichEditor::make('message')
-                                ->label('Bericht')
-                                ->default(function (Order $record) {
-                                    return self::getDefaultEmailTemplate($record);
-                                })
-                                ->required()
-                                ->toolbarButtons([
-                                    'bold',
-                                    'italic',
-                                    'underline',
-                                    'strike',
-                                    'bulletList',
-                                    'orderedList',
-                                    'h2',
-                                    'h3',
-                                    'link',
-                                    'undo',
-                                    'redo',
-                                ]),
-                                
-                            Forms\Components\Toggle::make('include_pdf')
-                                ->label('PDF bijvoegen')
-                                ->default(true)
-                                ->helperText('Voegt automatisch een PDF van de bestelling toe als bijlage'),
-                            
-                            Forms\Components\Actions::make([
-                                Forms\Components\Actions\Action::make('preview_pdf')
-                                    ->label('Voorbeeld PDF')
-                                    ->icon('heroicon-o-eye')
-                                    ->color('gray')
-                                    ->url(fn (Order $record) => route('orders.preview.pdf', $record))
-                                    ->openUrlInNewTab()
-                                    ->visible(fn (Order $record) => true),
-                            ]),
-                        ])
-                        ->action(function (Order $record, array $data) {
-                            try {
-                                // Generate PDF if requested
-                                $pdfPath = null;
-                                if ($data['include_pdf']) {
-                                    $pdfService = new OrderPdfService();
-                                    $pdfPath = $pdfService->generateOrderPdf($record);
-                                }
-                                
-                                // Send email
-                                Mail::to($record->supplier->contact_email)
-                                    ->send(new OrderMail($record, $data['subject'], $data['message'], $pdfPath));
-                                
-                                // Clean up temporary PDF file
-                                if ($pdfPath && file_exists($pdfPath)) {
-                                    unlink($pdfPath);
-                                }
-
-                                // Update status
-                                $record->status = 'sent';
-                                $record->save();
-                                
-                                Notification::make()
-                                    ->title('Email verstuurd')
-                                    ->body("De bestelling is verstuurd naar {$record->supplier->name} ({$record->supplier->contact_email})")
-                                    ->success()
-                                    ->send();
-                                    
-                            } catch (\Exception $e) {
-                                Notification::make()
-                                    ->title('Fout bij versturen email')
-                                    ->body('Er is een fout opgetreden: ' . $e->getMessage())
-                                    ->danger()
-                                    ->send();
-                            }
-                        }),
-
-                    Forms\Components\Actions\Action::make('deliver')
-                        ->label('Bevestig levering')
-                        ->icon('heroicon-o-truck')
-                        ->color('green')
-                        ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'sent')
-                        ->action(function (Order $record) {
-                            $record->update(['status' => 'delivered']);
-                            
-                            Notification::make()
-                                ->title('Bestelling geleverd')
-                                ->success()
-                                ->send();
-                        }),
-                ])
             ]);
     }
 
@@ -500,21 +430,7 @@ class OrderResource extends Resource
                     ->label(''),
                 Tables\Actions\EditAction::make()
                     ->label(''),
-                
-                Action::make('confirm')
-                    ->label('Bevestigen')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('emerald')
-                    ->visible(fn (Order $record) => $record->status === 'pending')
-                    ->action(function (Order $record) {
-                        $record->update(['status' => 'confirmed']);
-                        
-                        Notification::make()
-                            ->title('Bestelling bevestigd')
-                            ->success()
-                            ->send();
-                    }),
-                    
+            
                 Action::make('cancel')
                     ->label('Annuleren')
                     ->icon('heroicon-o-x-circle')
@@ -526,6 +442,34 @@ class OrderResource extends Resource
                         
                         Notification::make()
                             ->title('Bestelling geannuleerd')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('restore_order')
+                ->label('Herstellen')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->visible(fn (Order $record) => $record->status === 'cancelled')
+                ->action(function (Order $record) {
+                    $record->update(['status' => 'pending']);
+                    
+                    Notification::make()
+                        ->title('Bestelling hersteld')
+                        ->success()
+                        ->send();
+                }),
+
+                Action::make('confirm')
+                    ->label('Bevestigen')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('emerald')
+                    ->visible(fn (Order $record) => $record->status === 'pending')
+                    ->action(function (Order $record) {
+                        $record->update(['status' => 'confirmed']);
+                        
+                        Notification::make()
+                            ->title('Bestelling bevestigd')
                             ->success()
                             ->send();
                     }),
@@ -640,7 +584,110 @@ class OrderResource extends Resource
                             foreach ($records as $record) {
                                 $record->update(['status' => 'cancelled']);
                             }
-                        })
+                        }),
+
+                Tables\Actions\BulkAction::make('send_consolidated_orders')
+                    ->label('Verstuur gecombineerd naar leveranciers')
+                    ->icon('heroicon-o-envelope')
+                    ->color('blue')
+                    ->requiresConfirmation()
+                    ->modalHeading('Gecombineerde bestellingen versturen')
+                    ->modalDescription('De geselecteerde bestellingen worden per leverancier gecombineerd en verstuurd als één PDF.')
+                    ->form([
+                        Forms\Components\Toggle::make('include_pdf')
+                            ->label('PDF bijvoegen')
+                            ->default(true)
+                            ->helperText('Voegt automatisch één gecombineerde PDF toe per leverancier'),
+                            
+                        Forms\Components\TextInput::make('subject_prefix')
+                            ->label('Onderwerp voorvoegsel')
+                            ->default('Gecombineerde bestellingen')
+                            ->helperText('Dit wordt gevolgd door de bestelnummers'),
+                    ])
+                    ->action(function (Collection $records, array $data) {
+                        // Filter only confirmed orders and eager load relationships
+                        $confirmedOrders = $records->filter(fn($order) => $order->status === 'confirmed')
+                            ->load(['supplier', 'vendor', 'user', 'orderItems.item']);
+                            
+                        if ($confirmedOrders->isEmpty()) {
+                            Notification::make()
+                                ->title('Geen bevestigde bestellingen')
+                                ->body('Er zijn geen bevestigde bestellingen om te versturen.')
+                                ->warning()
+                                ->send();
+                            return;
+                        }
+                        
+                        // Group orders by supplier
+                        $ordersBySupplier = $confirmedOrders->groupBy('supplier_id');
+                        
+                        $successCount = 0;
+                        $errorCount = 0;
+                        $errors = [];
+                        
+                        foreach ($ordersBySupplier as $supplierId => $supplierOrders) {
+                            try {
+                                $supplier = $supplierOrders->first()->supplier;
+                                $orderNumbers = $supplierOrders->pluck('id')->join(', #');
+                                
+                                // Generate subject
+                                $subject = "{$data['subject_prefix']} #{$orderNumbers}";
+                                
+                                // Generate consolidated message
+                                $message = self::getConsolidatedEmailTemplate($supplierOrders);
+                                
+                                // Generate single consolidated PDF if requested
+                                $pdfPath = null;
+                                if ($data['include_pdf']) {
+                                    $pdfService = new OrderPdfService();
+                                    $pdfPath = $pdfService->generateConsolidatedOrderPdf($supplierOrders);
+                                }
+                                
+                                // Send consolidated email with single PDF
+                                Mail::to($supplier->contact_email)
+                                    ->send(new ConsolidatedOrderMail($supplierOrders, $subject, $message, $pdfPath));
+                                
+                                // Update all orders status to 'sent'
+                                foreach ($supplierOrders as $order) {
+                                    $order->update(['status' => 'sent']);
+                                }
+                                
+                                // Clean up temporary PDF file only after successful send
+                                if ($pdfPath && file_exists($pdfPath)) {
+                                    unlink($pdfPath);
+                                }
+                                
+                                $successCount++;
+                                
+                            } catch (\Exception $e) {
+                                $errorCount++;
+                                $errors[] = "Leverancier {$supplierId}: " . $e->getMessage();
+                                \Log::error("Failed to send consolidated order to supplier {$supplierId}", [
+                                    'error' => $e->getMessage(),
+                                    'trace' => $e->getTraceAsString()
+                                ]);
+                            }
+                        }
+                        
+                        // Show final notification with more details
+                        if ($successCount > 0) {
+                            Notification::make()
+                                ->title('Gecombineerde bestellingen verstuurd')
+                                ->body("Succesvol verstuurd naar {$successCount} leverancier(s)" . 
+                                    ($errorCount > 0 ? " ({$errorCount} mislukt)" : ""))
+                                ->success()
+                                ->send();
+                        }
+                        
+                        if ($errorCount > 0) {
+                            Notification::make()
+                                ->title('Fouten bij versturen')
+                                ->body("Problemen bij het versturen:\n" . implode("\n", $errors))
+                                ->danger()
+                                ->send();
+                        }
+                    })
+                    ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -687,7 +734,7 @@ class OrderResource extends Resource
                     ->schema([
                         Grid::make(4)
                             ->schema([
-                                TextEntry::make('')->label('Item')->placeholder('')->columnSpan(1),
+                                TextEntry::make('')->label('Product')->placeholder('')->columnSpan(1),
                                 TextEntry::make('')->label('Categorie')->placeholder('')->columnSpan(1),
                                 TextEntry::make('')->label('Aantal')->placeholder('')->columnSpan(1),
                                 TextEntry::make('')->label('Eenheid')->placeholder('')->columnSpan(1),
@@ -728,6 +775,41 @@ class OrderResource extends Resource
             <p>Een gedetailleerde PDF van de bestelling vindt u in de bijlage.</p>
             
             <p>Kunt u de levering bevestigen en de verwachte levertijd doorgeven?</p>
+            
+            <p>Met vriendelijke groet,<br>
+            Festival Management Team</p>
+        ";
+    }
+
+    private static function getConsolidatedEmailTemplate(Collection $orders): string
+    {
+        $supplier = $orders->first()->supplier;
+        $orderNumbers = $orders->pluck('id')->map(fn($id) => "#{$id}")->join(', ');
+        
+        $orderDetails = $orders->map(function ($order) {
+            $itemsList = $order->orderItems->map(function ($orderItem) {
+                return "  • {$orderItem->item->name} - {$orderItem->quantity} {$orderItem->item->unit->name}";
+            })->join('<br>');
+            
+            return "<strong>Bestelling #{$order->id} - {$order->vendor->name}</strong><br>" .
+                "Besteldatum: " . $order->ordered_at->format('d/m/Y H:i') . "<br>" .
+                "Items:<br>{$itemsList}";
+        })->join('<br><br>');
+
+        return "
+            <p>Beste {$supplier->name},</p>
+            
+            <p>Hierbij ontvangt u meerdere bestellingen van verschillende stands voor het festival, gecombineerd in één email.</p>
+            
+            <p><strong>Bestellingen:</strong> {$orderNumbers}</p>
+            
+            <div style='margin: 20px 0;'>
+            {$orderDetails}
+            </div>
+            
+            <p>Gedetailleerde PDF's van elke bestelling vindt u in de bijlagen.</p>
+            
+            <p>Kunt u de leveringen bevestigen en de verwachte levertijden doorgeven?</p>
             
             <p>Met vriendelijke groet,<br>
             Festival Management Team</p>

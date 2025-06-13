@@ -16,6 +16,13 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class ItemRelationManager extends RelationManager
 {
     protected static string $relationship = 'items';
+    
+    protected static ?string $title = 'Producten';
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Custom Navigation Label';
+    }
 
     public function form(Form $form): Form
     {
@@ -31,8 +38,9 @@ class ItemRelationManager extends RelationManager
     public function table(Tables\Table $table): Tables\Table
     {
         return $table
+            ->heading('Producten')
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Item Name')
+                Tables\Columns\TextColumn::make('name')->label('Product')
                     ->url(fn (Item $record): string => route('filament.admin.resources.items.edit', ['record' => $record]))
                     ->sortable()
                     ->searchable(),
@@ -54,7 +62,7 @@ class ItemRelationManager extends RelationManager
                 Tables\Actions\AttachAction::make()
                     ->form([
                         Forms\Components\Select::make('recordId')
-                            ->label('Item')
+                            ->label('Product')
                             ->options(Item::pluck('name', 'id'))
                             ->searchable()
                             ->createOptionForm([

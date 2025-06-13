@@ -22,6 +22,8 @@ class ItemResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-pie';
 
+    protected static ?string $navigationLabel = 'Producten';
+
 
     public static function form(Form $form): Form
     {
