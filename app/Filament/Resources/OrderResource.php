@@ -52,8 +52,26 @@ class OrderResource extends Resource
     protected static ?string $model = Order::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
+
+    protected static ?string $activeNavigationIcon = 'heroicon-s-envelope'; 
     
     protected static ?string $navigationLabel = 'Bestellingen';
+
+    protected static ?string $navigationGroup = 'Inkoop & Leveringen';
+
+    protected static ?int $navigationSort = 3;
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::where('status', 'pending')->count();
+    }
+
+    protected static ?string $navigationBadgeTooltip = 'Bestellingen in afwachting';
+
+    public static function getNavigationBadgeColor(): ?string 
+    {
+        return static::getModel()::where('status', 'pending')->count() > 10 ? 'danger' : 'warning';
+    }
     
     protected static ?string $modelLabel = 'Bestelling';
     
@@ -79,9 +97,15 @@ class OrderResource extends Resource
                                     ->required()
                                     ->searchable()
                                     ->reactive()
-                                    ->afterStateUpdated(function ($state, callable $set) {
-                                        // Reset order items when supplier changes
-                                        $set('orderItems', []);
+                                    ->default(function () {
+                                        // Pre-fill supplier_id from URL parameter
+                                        return request()->query('supplier_id');
+                                    })
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        $prefilledItemId = request()->query('item_id');
+                                        if (!$prefilledItemId) {
+                                            $set('orderItems', []);
+                                        }
                                     }),
                                     
                                 DateTimePicker::make('ordered_at')
@@ -108,7 +132,7 @@ class OrderResource extends Resource
                     ->relationship('orderItems')
                     ->schema([
                         Select::make('item_id')
-                            ->label('Item')
+                            ->label('Product')
                             ->options(function (callable $get) {
                                 $supplierId = $get('../../supplier_id');
                                 if (!$supplierId) {
@@ -214,6 +238,38 @@ class OrderResource extends Resource
                         ];
                     })
                     ->afterStateHydrated(function ($component, $state, $record) {
+                        // Handle pre-filling from URL parameters (for new records)
+                        if (!$record || !$record->exists) {
+                            $itemId = request()->query('item_id');
+                            if ($itemId) {
+                                $supplierId = request()->query('supplier_id');
+                                
+                                // Create initial item entry
+                                $initialItem = ['item_id' => $itemId, 'quantity' => 1];
+                                
+                                // Get cost price and unit if supplier is set
+                                if ($supplierId) {
+                                    $supplierItem = \DB::table('supplier_item')
+                                        ->where('supplier_id', $supplierId)
+                                        ->where('item_id', $itemId)
+                                        ->first();
+                                    
+                                    if ($supplierItem) {
+                                        $initialItem['cost_price'] = $supplierItem->cost_price;
+                                        $initialItem['line_total'] = $supplierItem->cost_price;
+                                    }
+                                    
+                                    $item = Item::find($itemId);
+                                    if ($item) {
+                                        $initialItem['unit_name'] = $item->unit->name;
+                                    }
+                                }
+                                
+                                $component->state([$initialItem]);
+                                return;
+                            }
+                        }
+
                         // Populate calculated fields when editing
                         if ($record && $record->orderItems) {
                             $supplierId = $record->supplier_id;
@@ -275,20 +331,6 @@ class OrderResource extends Resource
                     ->columnSpan('full'),
                     
                 Forms\Components\Actions::make([
-                    Forms\Components\Actions\Action::make('confirm')
-                        ->label('Bevestigen')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('emerald')
-                       ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'pending')
-                        ->action(function (Order $record) {
-                            $record->update(['status' => 'confirmed']); 
-                            
-                            Notification::make()
-                                ->title('Bestelling bevestigd')
-                                ->success()
-                                ->send();
-                        }),
-
                     Forms\Components\Actions\Action::make('cancel')
                         ->label('Annuleren')
                         ->icon('heroicon-o-x-circle')
@@ -300,6 +342,20 @@ class OrderResource extends Resource
                             
                             Notification::make()
                                 ->title('Bestelling geannuleerd')
+                                ->success()
+                                ->send();
+                        }),
+
+                    Forms\Components\Actions\Action::make('confirm')
+                        ->label('Bevestigen')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('emerald')
+                       ->visible(fn (?Order $record) => $record && $record->exists && $record->status === 'pending')
+                        ->action(function (Order $record) {
+                            $record->update(['status' => 'confirmed']); 
+                            
+                            Notification::make()
+                                ->title('Bestelling bevestigd')
                                 ->success()
                                 ->send();
                         }),
@@ -500,21 +556,7 @@ class OrderResource extends Resource
                     ->label(''),
                 Tables\Actions\EditAction::make()
                     ->label(''),
-                
-                Action::make('confirm')
-                    ->label('Bevestigen')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('emerald')
-                    ->visible(fn (Order $record) => $record->status === 'pending')
-                    ->action(function (Order $record) {
-                        $record->update(['status' => 'confirmed']);
-                        
-                        Notification::make()
-                            ->title('Bestelling bevestigd')
-                            ->success()
-                            ->send();
-                    }),
-                    
+            
                 Action::make('cancel')
                     ->label('Annuleren')
                     ->icon('heroicon-o-x-circle')
@@ -526,6 +568,20 @@ class OrderResource extends Resource
                         
                         Notification::make()
                             ->title('Bestelling geannuleerd')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('confirm')
+                    ->label('Bevestigen')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('emerald')
+                    ->visible(fn (Order $record) => $record->status === 'pending')
+                    ->action(function (Order $record) {
+                        $record->update(['status' => 'confirmed']);
+                        
+                        Notification::make()
+                            ->title('Bestelling bevestigd')
                             ->success()
                             ->send();
                     }),
@@ -687,7 +743,7 @@ class OrderResource extends Resource
                     ->schema([
                         Grid::make(4)
                             ->schema([
-                                TextEntry::make('')->label('Item')->placeholder('')->columnSpan(1),
+                                TextEntry::make('')->label('Product')->placeholder('')->columnSpan(1),
                                 TextEntry::make('')->label('Categorie')->placeholder('')->columnSpan(1),
                                 TextEntry::make('')->label('Aantal')->placeholder('')->columnSpan(1),
                                 TextEntry::make('')->label('Eenheid')->placeholder('')->columnSpan(1),

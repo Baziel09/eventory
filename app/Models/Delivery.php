@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Delivery extends Model
 {
     use SoftDeletes;
-    
+
     protected $fillable = [
         'order_id',
         'delivered_at',
@@ -22,7 +22,7 @@ class Delivery extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function receivedBy(): BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }

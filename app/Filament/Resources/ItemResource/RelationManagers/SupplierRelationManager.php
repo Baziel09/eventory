@@ -14,6 +14,10 @@ class SupplierRelationManager extends RelationManager
 {
     protected static string $relationship = 'suppliers';
 
+    protected static ?string $title = 'Leveranciers';
+
+    protected static ?string $pluralLabel = 'Leveranciers';
+
     public function table(Tables\Table $table): Tables\Table
     {
         return $table
@@ -46,12 +50,21 @@ class SupplierRelationManager extends RelationManager
             ])
             ->actions([
                 EditAction::make()
+                    ->label('')
                     ->form([
                         Forms\Components\TextInput::make('cost_price')
                             ->numeric()
                             ->required(),
                     ]),
-                DetachAction::make(),
+                Tables\Actions\Action::make('order')
+                    ->label('Bestellen')
+                    ->icon('heroicon-o-plus-circle')
+                    ->url(fn ($record) => route('filament.admin.resources.orders.create', [
+                        'supplier_id' => $record->id,
+                        'item_id' => $this->getOwnerRecord()->id 
+                    ])),
+                DetachAction::make()
+                    ->requiresConfirmation(),
             ]);
     }
 }
