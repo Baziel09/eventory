@@ -13,6 +13,7 @@ class Vendor extends Model
         'name',
         'event_id',
         'location_id',
+        'notes',
     ];
 
     public function event(): BelongsTo
@@ -24,8 +25,8 @@ class Vendor extends Model
     {
         return $this->hasMany(User::class);
     }
-
-    public function stocks(): HasMany
+    
+    public function stocks()
     {
         return $this->hasMany(VendorItemStock::class);
     }
@@ -39,10 +40,19 @@ class Vendor extends Model
     {
         return $this->belongsTo(Location::class);
     }
+    // public function items()
+    // {
+    //     return $this->belongsToMany(Item::class, 'vendor_item_stock')->with('item_id, vendor_id'); 
+
+    // }
     public function items()
-    {
-        return $this->belongsToMany(Item::class)->withPivot(['quantity', 'total'])->with('unit');
-    }
+{
+    return $this->belongsToMany(Item::class, 'vendor_item_stock')
+        ->withPivot('quantity')
+        ->withPivot('vendor_id')
+        ->withPivot('item_id');
+}
+
 }
     
 

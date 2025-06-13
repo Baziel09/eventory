@@ -28,6 +28,11 @@ class VendorResource extends Resource
     protected static ?string $label = 'Standen';
     protected static ?string $pluralLabel = 'Standen';
 
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -53,34 +58,6 @@ class VendorResource extends Resource
                         ->columnSpanFull(),
                 ])
                 ->collapsible(),
-            Forms\Components\Section::make('Overzicht')
-                ->schema([
-                    Forms\Components\Repeater::make('items')
-                    ->label('Artikelen overzicht')
-                    ->schema([
-                        Forms\Components\Placeholder::make('name')
-                            ->label('Artikel')
-                            ->content(fn ($record) => $record->name),
-                
-                        Forms\Components\Placeholder::make('unit')
-                            ->label('Eenheid')
-                            ->content(fn ($record) => $record->unit?->name),
-                
-                        Forms\Components\Placeholder::make('quantity')
-                            ->label('Aantal')
-                            ->content(fn ($record) => $record->quantity),
-                
-                        Forms\Components\Placeholder::make('total')
-                            ->label('Totaal')
-                            ->content(fn ($record) => $record->total),
-                    ])
-                    ->columns(2)
-                    ->disabled(),
-                ])
-                ->collapsible()
-                ->columnSpan([
-                    'md' => 2
-                ])
             ]);
     }
 
@@ -93,11 +70,15 @@ class VendorResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('event.name')
                     ->label('Festival')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('location.name')
-                    ->label('Locatie'),
+                    ->label('Locatie')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('notes')
-                    ->label('Notities'),
+                    ->label('Notities')
+                    ->limit(25)
+                    ->wrap(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Aangemaakt')->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -123,6 +104,7 @@ class VendorResource extends Resource
     {
         return [
             RelationManagers\ItemRelationManager::class,
+            // RelationManagers\StocksRelationManager::class,
         ];
     }
     public static function getPages(): array
