@@ -11,23 +11,16 @@ class Location extends Model
 
     protected $fillable = [
         'name',
-        'event_id',
         'description',
     ];
 
-    public function event()
+    public function events()
     {
-        return $this->belongsTo(Event::class);
+        return $this->hasMany(Event::class);
     }
 
     public function vendors()
     {
         return $this->hasMany(Vendor::class);
     }
-    public function locations()
-{
-    return $this->hasMany(Location::class);
-}
-
-
 }

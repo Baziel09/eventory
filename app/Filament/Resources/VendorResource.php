@@ -10,6 +10,14 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Resources\VendorResource\RelationManagers;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class VendorResource extends Resource
 {
@@ -20,18 +28,17 @@ class VendorResource extends Resource
     protected static ?string $label = 'Standen';
     protected static ?string $pluralLabel = 'Standen';
 
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\TextInput::make('name')
-                ->label('Naam van voorraadbeheerder')
+                ->label('Naam')
                 ->required(),
-            Forms\Components\TextInput::make('email')
-                ->email()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('phone')
-                ->tel()
-                ->maxLength(255),   
             Forms\Components\Select::make('event_id')
                 ->label('Festival')
                 ->relationship('event', 'name')
@@ -42,30 +49,64 @@ class VendorResource extends Resource
                 ->relationship('location', 'name')
                 ->preload()
                 ->required(),
-                
-        ]);
+            Forms\Components\Section::make('Notities')
+                ->schema([
+                    Forms\Components\Textarea::make('notes')
+                        ->label('Notities')
+                        ->placeholder('Voeg hier notities toe over deze stand')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ])
+                ->collapsible(),
+            ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Naam')->searchable(),
-                Tables\Columns\TextColumn::make('email')->label('E-mail')->searchable(),
-                Tables\Columns\TextColumn::make('phone')->label('Telefoon'),
-                Tables\Columns\TextColumn::make('event.name')->label('Festival'),
-                Tables\Columns\TextColumn::make('location.name')->label('Locatie'),
-                Tables\Columns\TextColumn::make('created_at')->label('Aangemaakt')->dateTime(),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Naam')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('event.name')
+                    ->label('Festival')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('location.name')
+                    ->label('Locatie')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('notes')
+                    ->label('Notities')
+                    ->limit(25)
+                    ->wrap(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Aangemaakt')->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Laatst gewijzigd')->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('event')->relationship('event', 'name'),
+                Tables\Filters\SelectFilter::make('location')->relationship('location', 'name'),
+
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
-
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\ItemRelationManager::class,
+            // RelationManagers\StocksRelationManager::class,
+        ];
+    }
     public static function getPages(): array
     {
         return [
