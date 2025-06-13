@@ -95,6 +95,7 @@ class ItemRelationManager extends RelationManager
         
             Tables\Actions\Action::make('increase')
                 ->label('+1')
+                ->color('success')
                 ->action(function (Item $record) {
                     $record->pivot->quantity += 1;
                     $record->pivot->save();
@@ -102,6 +103,7 @@ class ItemRelationManager extends RelationManager
         
             Tables\Actions\Action::make('decrease')
                 ->label('-1')
+                ->color('danger')
                 ->action(function (Item $record) {
                     $record->pivot->quantity = max(0, $record->pivot->quantity - 1);
                     $record->pivot->save();
@@ -109,6 +111,7 @@ class ItemRelationManager extends RelationManager
         
             Tables\Actions\Action::make('addCustom')
                 ->label('+ Custom')
+                ->color('warning')
                 ->form([
                     Forms\Components\TextInput::make('amount')->numeric()->required(),
                 ])
@@ -116,7 +119,14 @@ class ItemRelationManager extends RelationManager
                     $record->pivot->quantity += (int) $data['amount'];
                     $record->pivot->save();
                 }),
-        
+            Tables\Actions\Action::make('order')
+                ->label('Bestellen')
+                ->color('success')
+                ->icon('heroicon-o-shopping-cart')
+                ->url(fn ($record) => route('filament.admin.resources.orders.create', [
+                    'supplier_id' => $record->id,
+                    'item_id' => $this->getOwnerRecord()->id 
+                ])),
     
         ])
            ->bulkActions([
