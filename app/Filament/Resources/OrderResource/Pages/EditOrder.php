@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Mail\OrderMail;
 use App\Services\OrderPdfService;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -111,6 +112,16 @@ class EditOrder extends EditRecord
                         ->label('PDF bijvoegen')
                         ->default(true)
                         ->helperText('Voegt automatisch een PDF van de bestelling toe als bijlage'),
+
+                    Forms\Components\Actions::make([
+                        Forms\Components\Actions\Action::make('preview_pdf')
+                            ->label('Voorbeeld PDF')
+                            ->icon('heroicon-o-eye')
+                            ->color('gray')
+                            ->url(fn (Order $record) => route('orders.preview.pdf', $record))
+                            ->openUrlInNewTab()
+                            ->visible(fn (Order $record) => true),
+                    ]),
                 ])
                 ->action(function (Order $record, array $data) {
                     try {
@@ -202,7 +213,20 @@ class EditOrder extends EditRecord
     ];
     }
 
-        private static function getDefaultEmailTemplate(Order $record): string
+    protected function getFormActions(): array
+    {
+        return [
+            ...parent::getFormActions(),
+            Actions\Action::make('preview_pdf')
+                ->label('Voorbeeld PDF')
+                ->icon('heroicon-o-eye')
+                ->color('gray')
+                ->url(fn () => route('orders.preview.pdf', $this->record))
+                ->openUrlInNewTab(),
+        ];
+    }
+
+    private static function getDefaultEmailTemplate(Order $record): string
     {
         $itemsList = $record->orderItems->map(function ($orderItem) {
             return "• {$orderItem->item->name} - {$orderItem->quantity} {$orderItem->item->unit->name}";

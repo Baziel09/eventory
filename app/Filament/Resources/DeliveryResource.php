@@ -32,6 +32,7 @@ class DeliveryResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('order_id')
+                    ->label('Bestelnummer')
                     ->relationship('order', 'id')
                     ->required(),
                 Forms\Components\DateTimePicker::make('delivered_at'),
@@ -52,13 +53,11 @@ class DeliveryResource extends Resource
                 Tables\Columns\TextColumn::make('delivered_at')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('user_id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Geaccepteerd door')
+                    //->url(fn (User $record): string => route('filament.admin.resources.users.edit', ['record' => $record]))
+                    ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -72,7 +71,16 @@ class DeliveryResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('ViewOrder')
+                    ->label('Bestelling')
+                    ->color('warning')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->url(fn (Delivery $record): string => route('filament.admin.resources.orders.edit', ['record' => $record->order_id])),
+                Tables\Actions\EditAction::make()
+                    ->label(''),  
+                Tables\Actions\DeleteAction::make()
+                    ->label(''),
+                Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
