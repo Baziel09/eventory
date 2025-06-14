@@ -563,10 +563,39 @@ class OrderResource extends Resource
                     ->color('green')
                     ->visible(fn (Order $record) => $record->status === 'sent')
                     ->action(function (Order $record) {
-                        $record->update(['status' => 'delivered']);
+                        \DB::transaction(function () use ($record) {
+                            $record->update(['status' => 'delivered']);
+                
+                            $delivery = \App\Models\Delivery::create([
+                                'order_id' => $record->id,
+                                'delivered_at' => now(),
+                                'user_id' => auth()->id() 
+                            ]);
+             
+                            foreach ($record->orderItems as $orderItem) {
+                                // Create delivery item
+                                $delivery->items()->create([
+                                    'item_id' => $orderItem->item_id,
+                                    'delivered_quantity' => $orderItem->quantity
+                                ]);
+  
+                                $vendorItem = $record->vendor->items()->where('item_id', $orderItem->item_id)->first();
+                                
+                                if ($vendorItem) {
+                                    $record->vendor->items()->updateExistingPivot($orderItem->item_id, [
+                                        'quantity' => $vendorItem->pivot->quantity + $orderItem->quantity
+                                    ]);
+                                } else {
+                                    $record->vendor->items()->attach($orderItem->item_id, [
+                                        'quantity' => $orderItem->quantity
+                                    ]);
+                                }
+                            }
+                        });
                         
                         Notification::make()
                             ->title('Bestelling geleverd')
+                            ->body('De voorraad is succesvol bijgewerkt')
                             ->success()
                             ->send();
                     }),

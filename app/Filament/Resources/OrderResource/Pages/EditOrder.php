@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Mail\OrderMail;
 use App\Services\OrderPdfService;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -111,6 +112,16 @@ class EditOrder extends EditRecord
                         ->label('PDF bijvoegen')
                         ->default(true)
                         ->helperText('Voegt automatisch een PDF van de bestelling toe als bijlage'),
+
+                    Forms\Components\Actions::make([
+                        Forms\Components\Actions\Action::make('preview_pdf')
+                            ->label('Voorbeeld PDF')
+                            ->icon('heroicon-o-eye')
+                            ->color('gray')
+                            ->url(fn (Order $record) => route('orders.preview.pdf', $record))
+                            ->openUrlInNewTab()
+                            ->visible(fn (Order $record) => true),
+                    ]),
                 ])
                 ->action(function (Order $record, array $data) {
                     try {
@@ -153,23 +164,93 @@ class EditOrder extends EditRecord
                     }
                 }),
 
-            Actions\Action::make('deliver')
-                ->label('Bevestig levering')
+            Actions\Action::make('mark_as_delivered')
+                ->label('Geleverd')
                 ->icon('heroicon-o-truck')
-                ->color('success')
+                ->color('green')
                 ->visible(fn (Order $record) => $record->status === 'sent')
                 ->action(function (Order $record) {
-                    $record->update(['status' => 'delivered']);
+                    \DB::transaction(function () use ($record) {
+                        $record->update(['status' => 'delivered']);
+            
+                        $delivery = \App\Models\Delivery::create([
+                            'order_id' => $record->id,
+                            'delivered_at' => now(),
+                            'user_id' => auth()->id() 
+                        ]);
+            
+                        foreach ($record->orderItems as $orderItem) {
+                            // Create delivery item
+                            $delivery->items()->create([
+                                'item_id' => $orderItem->item_id,
+                                'delivered_quantity' => $orderItem->quantity
+                            ]);
 
+                            $vendorItem = $record->vendor->items()->where('item_id', $orderItem->item_id)->first();
+                            
+                            if ($vendorItem) {
+                                $record->vendor->items()->updateExistingPivot($orderItem->item_id, [
+                                    'quantity' => $vendorItem->pivot->quantity + $orderItem->quantity
+                                ]);
+                            } else {
+                                $record->vendor->items()->attach($orderItem->item_id, [
+                                    'quantity' => $orderItem->quantity
+                                ]);
+                            }
+                        }
+                    });
+                    
                     $this->refreshFormData([
                         'status'
                     ]);
                     
                     Notification::make()
                         ->title('Bestelling geleverd')
+                        ->body('De voorraad is succesvol bijgewerkt')
                         ->success()
                         ->send();
                 }),
+    ];
+    }
+
+    protected function getFormActions(): array
+    {
+        return [
+            ...parent::getFormActions(),
+            Actions\Action::make('preview_pdf')
+                ->label('Voorbeeld PDF')
+                ->icon('heroicon-o-eye')
+                ->color('gray')
+                ->url(fn () => route('orders.preview.pdf', $this->record))
+                ->openUrlInNewTab(),
         ];
+    }
+
+    private static function getDefaultEmailTemplate(Order $record): string
+    {
+        $itemsList = $record->orderItems->map(function ($orderItem) {
+            return "• {$orderItem->item->name} - {$orderItem->quantity} {$orderItem->item->unit->name}";
+        })->join('<br>');
+
+        return "
+            <p>Beste {$record->supplier->name},</p>
+            
+            <p>Hierbij ontvangt u een nieuwe bestelling van {$record->vendor->name} voor het festival.</p>
+            
+            <p><strong>Bestelgegevens:</strong><br>
+            Bestelnummer: #{$record->id}<br>
+            Besteldatum: " . $record->ordered_at->format('d/m/Y H:i') . "<br>
+            Stand: {$record->vendor->name}</p>
+            
+            <p><strong>Bestelde items:</strong><br>
+            {$itemsList}</p>
+            
+            <p>Een gedetailleerde PDF van de bestelling vindt u in de bijlage.</p>
+            
+            <p>Kunt u de levering bevestigen en de verwachte levertijd doorgeven?</p>
+            
+            <p>Met vriendelijke groet,<br>
+            Festival Management Team</p>
+        ";
     }
 }
