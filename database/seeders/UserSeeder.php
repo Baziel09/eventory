@@ -17,6 +17,8 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Admin',
                 'password' => bcrypt('password'),
+                'phone' => '0612345678',
+                'is_active' => true,
             ]
         );
         $admin->assignRole('admin');
@@ -26,6 +28,8 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Voorraad Beheerder',
                 'password' => bcrypt('password'),
+                'phone' => '0687654321',
+                'is_active' => true,
             ]
         );
         $voorraadUser->assignRole('voorraadbeheerder');
@@ -35,6 +39,8 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Vrijwilliger',
                 'password' => bcrypt('password'),
+                'phone' => '0678901234',
+                'is_active' => true,
             ]
         );
         $vrijwilligerUser->assignRole('vrijwilliger');

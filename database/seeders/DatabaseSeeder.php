@@ -19,6 +19,13 @@ class DatabaseSeeder extends Seeder
             LocationSeeder::class,
             CategoriesTableSeeder::class,
             UnitsTableSeeder::class,
+            ItemSeeder::class,
+            SupplierSeeder::class,
+            SupplierItemSeeder::class,
+            VendorSeeder::class,
+            VendorItemStockSeeder::class,
+            OrderSeeder::class,
+            OrderItemSeeder::class,
         ]);
     }
 }
