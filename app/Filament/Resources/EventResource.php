@@ -79,7 +79,7 @@ class EventResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('location')
+                Tables\Columns\TextColumn::make('location.name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('discription')
                     ->searchable(),
@@ -99,12 +99,12 @@ class EventResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('vendors.name')
-                    ->searchable()
-                    ->label('Vendor Name'),
-                Tables\Columns\TextColumn::make('vendors.location')
-                    ->searchable()
-                    ->label('Vendor Location'),
+                // Tables\Columns\TextColumn::make('vendors.name')
+                //     ->searchable()
+                //     ->label('Vendor Name'),
+                // Tables\Columns\TextColumn::make('vendors.location')
+                //     ->searchable()
+                //     ->label('Vendor Location'),
                     ])
             ->filters([
                 //
