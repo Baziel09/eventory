@@ -18,16 +18,40 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use App\Filament\Clusters\Standen;
+use Filament\Navigation\NavigationItem;
+use Filament\Facades\Filament;
+
 
 class VendorResource extends Resource
 {
     protected static ?string $model = Vendor::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationGroup = 'Festivalbeheer';
     protected static ?string $label = 'Standen';
     protected static ?string $pluralLabel = 'Standen';
-
+    protected static ?string $cluster = Standen::class;
+    public static function getNavigationItems(): array
+    {
+        return Vendor::all()
+            ->map(function (Vendor $location) {
+                return NavigationItem::make()
+                    ->label($location->name)
+                    ->url(static::getUrl('edit', ['record' => $location]))
+                    ->group('Festivalbeheer') // Must match cluster's navigation group
+                    ->icon('heroicon-o-building-storefront'); // optional icon
+            })->toArray();
+    }
+    // public static function getNavigationItems(): array
+    // {
+    //     return Vendor::all()->map(function (Vendor $vendor) {
+    //         return NavigationItem::make()
+    //             ->label($vendor->name)
+    //             ->url(static::getUrl('edit', ['record' => $vendor]))
+    //             ->group('Festivalbeheer') // Must match cluster's navigation group
+    //             ->icon('heroicon-o-building-storefront'); // optional icon
+    //     })->toArray();
+    // }
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();
@@ -115,4 +139,8 @@ class VendorResource extends Resource
             'edit' => Pages\EditVendor::route('/{record}/edit'),
         ];
     }
+    public static function getClusterName(): string
+{
+    return __('filament/clusters/cluster.name');
+}
 }
