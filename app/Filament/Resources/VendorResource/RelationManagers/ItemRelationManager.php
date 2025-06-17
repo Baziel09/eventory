@@ -12,7 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-
+use Filament\Tables\Columns\BadgeColumn;
 class ItemRelationManager extends RelationManager
 {
    protected static string $relationship = 'items';
@@ -20,7 +20,8 @@ class ItemRelationManager extends RelationManager
 
    public function form(Form $form): Form
    {
-       return $form->schema([]);
+       return $form->schema([
+       ]);
    }
 
 
@@ -45,15 +46,31 @@ class ItemRelationManager extends RelationManager
                Tables\Columns\TextColumn::make('updated_at')
                    ->label('Laatst gewijzigd')->dateTime()
                    ->toggleable(isToggledHiddenByDefault: true),
-               Tables\Columns\TextColumn::make('pivot.quantity')
-                   ->label('Hoeveelheid voorraad')
+               Tables\Columns\TextColumn::make('quantity')
+                   ->label('Voorraad')
                    ->sortable()
                    ->searchable(),
+                Tables\Columns\TextColumn::make('min_quantity')
+                   ->label('Minimum voorraad')
+                   ->sortable()
+                   ->searchable(),
+                   
+
+                   BadgeColumn::make('quantity')
+                       ->label('voorraad')
+                       ->colors([
+                            'red' => fn ($record) => $record->pivot->quantity < $record->pivot->min_quantity,
+                            'emerald' => fn ($record) => $record->pivot->quantity >= $record->pivot->min_quantity,
+                            'yellow' => fn ($record) => $record->pivot->quantity < ($record->pivot->min_quantity * 1.5) && $record->pivot->quantity >= $record->pivot->min_quantity,
+                       ])
+                       ->formatStateUsing(fn ($state) => $state),
            ])
-           ->filters([
+                ->filters([
                Tables\Filters\TrashedFilter::make(),
                Tables\Filters\SelectFilter::make('category')
                    ->relationship('category', 'name'),
+               Tables\Filters\SelectFilter::make('unit')
+                   ->relationship('unit', 'name'),
            ])
            ->headerActions([
             Tables\Actions\AttachAction::make()
@@ -80,6 +97,7 @@ class ItemRelationManager extends RelationManager
                     Forms\Components\TextInput::make('quantity')
                         ->numeric()
                         ->required(),
+                        
                 ]),
         ])
         
@@ -91,6 +109,11 @@ class ItemRelationManager extends RelationManager
                         ->label('Quantiteit')
                         ->numeric()
                         ->required(),
+                    Forms\Components\TextInput::make('min_quantity')
+                        ->label('Minimum voorraad')
+                        ->numeric()
+                        ->required()
+                        ->default(0),
                 ]),
         
             Tables\Actions\Action::make('increase')

@@ -49,6 +49,7 @@ class Vendor extends Model
 {
     return $this->belongsToMany(Item::class, 'vendor_item_stock')
         ->withPivot('quantity')
+        ->withPivot('min_quantity')
         ->withPivot('vendor_id')
         ->withPivot('item_id');
 }

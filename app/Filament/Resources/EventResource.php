@@ -36,33 +36,6 @@ class EventResource extends Resource
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\Select::make('vendor_id')
-                    ->relationship('vendors', 'name')
-                    ->multiple()
-                    ->searchable()
-                    ->createOptionForm([
-                        Forms\Components\TextInput::make('name')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('email')
-                            ->email()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('location')
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('phone')
-                            ->tel()
-                            ->maxLength(255),
-                    ])
-                    ->createOptionUsing(function (array $data, Forms\Get $get): int {
-                        return Vendor::create([
-                            'name' => $data['name'],
-                            'location' => $data['location'],
-                            'phone' => $data['phone'],
-                            'email' => $data['email'],
-                            'user_id' => auth()->id(),
-                            'event_id' => $get('id'), // This assumes you're editing an existing Event
-                        ])->id;
-                    }),
 
                 Forms\Components\DatePicker::make('start_date')
                     ->required(),
@@ -99,25 +72,16 @@ class EventResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                // Tables\Columns\TextColumn::make('vendors.name')
-                //     ->searchable()
-                //     ->label('Vendor Name'),
-                // Tables\Columns\TextColumn::make('vendors.location')
-                //     ->searchable()
-                //     ->label('Vendor Location'),
                     ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
                 
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+
                 
             ]);
     }
@@ -133,7 +97,6 @@ class EventResource extends Resource
     {
         return [
             'index' => Pages\ListEvents::route('/'),
-            'create' => Pages\CreateEvent::route('/create'),
             'edit' => Pages\EditEvent::route('/{record}/edit'),
         ];
     }

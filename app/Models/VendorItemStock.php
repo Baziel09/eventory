@@ -15,6 +15,7 @@ class VendorItemStock extends Model
         'vendor_id',
         'item_id',
         'quantity',
+        'min_quantity',
         'last_updated'
     ];
 
