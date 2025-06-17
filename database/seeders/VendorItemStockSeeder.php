@@ -21,6 +21,7 @@ class VendorItemStockSeeder extends Seeder
                     'vendor_id' => $vendor->id,
                     'item_id' => $item->id,
                     'quantity' => rand(20, 100),
+                    'min_quantity' => rand(5, 25),
                 ]);
             }
         }

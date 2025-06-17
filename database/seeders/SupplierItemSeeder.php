@@ -11,10 +11,10 @@ class SupplierItemSeeder extends Seeder
 {
     public function run()
     {
-        $suppliers = Supplier::take(7)->get();
+        $suppliers = Supplier::take(39)->get();
 
         foreach ($suppliers as $supplier) {
-            $items = Item::inRandomOrder()->take(3)->get();
+            $items = Item::inRandomOrder()->take(5)->get();
 
             foreach ($items as $item) {
                 DB::table('supplier_item')->updateOrInsert(
@@ -23,7 +23,7 @@ class SupplierItemSeeder extends Seeder
                         'item_id' => $item->id,
                     ],
                     [
-                        'cost_price' => rand(10, 100),
+                        'cost_price' => rand(5, 50),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]
