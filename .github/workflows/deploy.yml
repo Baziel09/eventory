@@ -43,4 +43,4 @@ jobs:
           
       - name: Post-deployment commands
         run: |
-          ssh hellocodebe@ssh.hellocode.be "cd subsites/fullstack.be && bash post-deploy.sh"
+          ssh productionserverbe@ssh.productionserver.be "cd subsites/eventory.be && bash post-deploy.sh"
