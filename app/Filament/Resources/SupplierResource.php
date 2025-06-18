@@ -49,22 +49,28 @@ class SupplierResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->label('Naam'),
                 Tables\Columns\TextColumn::make('contact_email')
-                    ->searchable(),
+                    ->searchable()
+                    ->label('E-mail'),
                 Tables\Columns\TextColumn::make('contact_phone')
-                    ->searchable(),
+                    ->searchable()
+                    ->label('Telefoonnummer'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Aangemaakt op')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Bijgewerkt op')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Verwijderd op')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([

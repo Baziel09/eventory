@@ -59,6 +59,8 @@ class OrderResource extends Resource
     
     protected static ?string $navigationLabel = 'Bestellingen';
 
+    protected static ?string $pluralNavigationLabel = 'Bestellingen';
+
     protected static ?string $navigationGroup = 'Inkoop & Leveringen';
 
     protected static ?int $navigationSort = 3;

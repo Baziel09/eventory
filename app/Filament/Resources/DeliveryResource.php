@@ -24,7 +24,9 @@ class DeliveryResource extends Resource
     protected static ?string $navigationGroup = 'Inkoop & Leveringen';
 
     protected static ?string $navigationLabel = 'Leveringen';
-
+    
+    protected static ?string $pluralLabel = 'Leveringen';
+    
     protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
@@ -49,22 +51,27 @@ class DeliveryResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('order.id')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->label('Bestelnummer'),
                 Tables\Columns\TextColumn::make('delivered_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->label('Levering geaccepteerd op'),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Geaccepteerd door')
                     //->url(fn (User $record): string => route('filament.admin.resources.users.edit', ['record' => $record]))
                     ->searchable()
+                    ->label('Geaccepteerd door')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Aangepast op')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Verwijderd op')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([

@@ -20,28 +20,37 @@ class EventResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
+    protected static ?string $navigationLabel = 'Evenementen';
+
+    protected static ?string $pluralLabel = 'Evenementen';
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
+                    ->label('Naam')
                     ->maxLength(255),
 
                 Forms\Components\TextInput::make('discription')
                     ->required()
+                    ->label('Beschrijving')
                     ->maxLength(750),
 
                 Forms\Components\TextInput::make('location')
                     ->required()
+                    ->label('Locatie')
                     ->maxLength(255),
 
 
                 Forms\Components\DatePicker::make('start_date')
-                    ->required(),
+                    ->required()
+                    ->label('Startdatum'),
                 
                 Forms\Components\DatePicker::make('end_date')
-                    ->required(),
+                    ->required()
+                    ->label('Einddatum'),
 
             ]);
     }
@@ -51,26 +60,34 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->label('Naam'),
                 Tables\Columns\TextColumn::make('location.name')
-                    ->searchable(),
+                    ->searchable()
+                    ->label('Locatie'),
                 Tables\Columns\TextColumn::make('discription')
-                    ->searchable(),
+                    ->searchable()
+                    ->label('Beschrijving')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('start_date')
                     ->date()
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->label('Startdatum'),
                 Tables\Columns\TextColumn::make('end_date')
                     ->date()
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->label('Einddatum'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Aangemaakt op')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
+                    ->label('Aangepast op')
                     ->toggleable(isToggledHiddenByDefault: true),
                     ])
             ->filters([

@@ -24,6 +24,9 @@ class ItemResource extends Resource
 
     protected static ?string $navigationLabel = 'Producten';
 
+    protected static ?string $pluralLabel = 'Producten';
+    
+
 
     public static function form(Form $form): Form
     {
@@ -31,14 +34,17 @@ class ItemResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->label('Naam'),
 
                 Forms\Components\Select::make('unit_id')
                     ->relationship('unit', 'name')
-                    ->required(),
+                    ->required()
+                    ->label('Eenheid'),
                 Forms\Components\Select::make('category_id')
                     ->relationship('category', 'name')
-                    ->required(),
+                    ->required()
+                    ->label('Categorie'),
             ]);
     }
     public static function table(Table $table): Table
@@ -46,26 +52,31 @@ class ItemResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->searchable()
+                    ->label ('Naam'),
                 Tables\Columns\TextColumn::make('unit.name')
                     ->numeric()
+                    ->label ('Eenheid')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('category.name')
                     ->numeric()
+                    ->label ('Categorie')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
+                    ->label ('Aangemaakt op')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
+                    ->label ('Aangepast op')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 // Tables\Filters\TrashedFilter::make(),
-                Tables\Filters\SelectFilter::make('category')->relationship('category', 'name'),
-                Tables\Filters\SelectFilter::make('unit')->relationship('unit', 'name'),
+                Tables\Filters\SelectFilter::make('categorie')->relationship('category', 'name'),
+                Tables\Filters\SelectFilter::make('eenheid')->relationship('unit', 'name'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

@@ -84,15 +84,21 @@ class VendorResource extends Resource
                     ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Aangemaakt')->dateTime()
+                    ->label('Aangemaakt')
+                    ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Laatst gewijzigd')->dateTime()
+                    ->label('Laatst gewijzigd')
+                    ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('event')->relationship('event', 'name'),
-                Tables\Filters\SelectFilter::make('location')->relationship('location', 'name'),
+                Tables\Filters\SelectFilter::make('event')
+                    ->relationship('event', 'name')
+                    ->label('Festival'),
+                Tables\Filters\SelectFilter::make('location')
+                    ->relationship('location', 'name')
+                    ->label('Locatie op festival'),
 
             ])
             ->actions([
@@ -119,8 +125,5 @@ class VendorResource extends Resource
             'edit' => Pages\EditVendor::route('/{record}/edit'),
         ];
     }
-    public static function getClusterName(): string
-{
-    return __('filament/clusters/cluster.name');
-}
+
 }
