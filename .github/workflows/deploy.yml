@@ -1,49 +1,46 @@
-name: Build & Deploy Laravel to Combell
+name: Deploy to Production
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - name: Set up PHP
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, bcmath, xml, ctype, json, pdo, tokenizer
-
+          extensions: mbstring, bcmath
+          
       - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader
-
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Install NPM dependencies
-        run: npm install
-
-      - name: Build assets
-        run: npm run build
-
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Deploy via rsync
+        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          
+      - name: Setup deploy key
         run: |
-          rsync -avz --delete \
-            --exclude=".git" \
-            --exclude=".env" \
-            --exclude="tests" \
-            --exclude="node_modules" \
-            -e "ssh -p ${{ secrets.SSH_PORT }}" \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:subsites/eventory.be/
-
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan ssh.productionserver.be >> ~/.ssh/known_hosts
+          
+      - name: Deploy to server
+        run: |
+          # Use rsync with relative path (from home directory)
+          rsync -avz --exclude '.git/' \
+                     --exclude '.github/' \
+                     --exclude 'node_modules/' \
+                     --exclude '.env' \
+                     --exclude '.env.example' \
+                     ./ productionserverbe@ssh.productionserver.be:subsites/eventory.be/
+          
+      - name: Post-deployment commands
+        run: |
+          ssh hellocodebe@ssh.hellocode.be "cd subsites/fullstack.be && bash post-deploy.sh"
