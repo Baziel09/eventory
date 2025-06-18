@@ -45,16 +45,5 @@ jobs:
             --exclude="tests" \
             --exclude="node_modules" \
             -e "ssh -p ${{ secrets.SSH_PORT }}" \
-            ./ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/subsites/eventory.be/
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:subsites/eventory.be/
 
-      - name: Run Laravel commands remotely
-        run: |
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ~/subsites/eventory.be
-            php artisan migrate --force
-            php artisan db:seed --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-          EOF
