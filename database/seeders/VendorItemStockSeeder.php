@@ -11,7 +11,7 @@ class VendorItemStockSeeder extends Seeder
 {
     public function run()
     {
-        $vendors = Vendor::take(5)->get();
+        $vendors = Vendor::take(1000)->get();
 
         foreach ($vendors as $vendor) {
         $items = Item::inRandomOrder()->take(3)->get();
