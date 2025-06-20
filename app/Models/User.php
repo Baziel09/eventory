@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Iluminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -35,7 +36,9 @@ class User extends Authenticatable
     
     public function vendor()
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsToMany(Vendor::class, 'user_vendor')
+            ->withPivot('vendor_id')
+            ->withPivot('user_id');
     }
 
     public function stockTransactions(): HasMany
