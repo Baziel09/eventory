@@ -18,16 +18,16 @@ class ListVendors extends ListRecords
         ];
     }
 
-    // protected function getTableQuery(): Builder
-    // {
-    //     $query = parent::getTableQuery();
+    protected function getTableQuery(): Builder
+    {
+        $query = parent::getTableQuery();
 
-    //     if (auth()->user()->hasRole('voorraadbeheerder')) {
-    //         $query->whereHas('user', function ($q) {
-    //             $q->where('user_id', auth()->id());
-    //         });
-    //     }
+        if (auth()->user()->hasRole('voorraadbeheerder')) {
+            $query->whereHas('users', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
 
-    //     return $query;
-    // }
+        return $query;
+    }
 }
