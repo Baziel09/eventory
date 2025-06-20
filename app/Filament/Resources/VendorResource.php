@@ -36,9 +36,17 @@ class VendorResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return Vendor::whereHas('items', function ($query) {
+        $vendors = Vendor::whereHas('items', function ($query) {
             $query->whereColumn('quantity', '<', 'min_quantity');
-        })->count();
+        });
+
+        if (auth()->user()->hasRole('voorraadbeheerder')) {
+            $vendors = $vendors->whereHas('users', function ($query) {
+                $query->where('user_id', auth()->id());
+            });
+        }
+
+        return $vendors->count();
     }
 
     public static function getNavigationBadgeColor(): ?string
@@ -127,7 +135,8 @@ class VendorResource extends Resource
 
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->visible(auth()->user()->hasRole('admin')),
             ]);
     }
     public static function getRelations(): array

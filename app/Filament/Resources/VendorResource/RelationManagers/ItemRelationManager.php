@@ -105,7 +105,7 @@ class ItemRelationManager extends RelationManager
         
         ->actions([
             Tables\Actions\EditAction::make()
-                ->label('Product bewerken')
+                ->label('Bewerken')
                 ->modalHeading('Bewerken')
                 ->form([
                     Forms\Components\TextInput::make('quantity')
