@@ -16,4 +16,8 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole('admin') ? true : null;
         });
     }
+    
+    protected $policies = [
+        \App\Models\Delivery::class => \App\Policies\DeliveryPolicy::class,
+    ];
 }

@@ -82,14 +82,17 @@ class ItemResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\RestoreAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\RestoreAction::make()
+                    ->visible(auth()->user()->hasRole('admin')),
+                Tables\Actions\ForceDeleteAction::make()
+                    ->visible(auth()->user()->hasRole('admin')),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(auth()->user()->hasRole('admin')),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                ])->visible(auth()->user()->hasRole('admin')),
             ]);
     }
 

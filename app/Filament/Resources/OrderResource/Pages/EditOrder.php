@@ -63,7 +63,7 @@ class EditOrder extends EditRecord
                 ->label('Bevestigen')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn (Order $record) => $record->status === 'pending')
+                ->visible(fn (Order $record) => $record->status === 'pending' && auth()->user()->hasRole('admin'))
                 ->action(function (Order $record) {
                     $record->update(['status' => 'confirmed']);
 
@@ -81,7 +81,7 @@ class EditOrder extends EditRecord
                 ->label('Verstuur naar leverancier')
                 ->icon('heroicon-o-envelope')
                 ->color('primary')
-                ->visible(fn (Order $record) => $record->status === 'confirmed')
+                ->visible(fn (Order $record) => $record->status === 'confirmed' && auth()->user()->hasRole('admin'))
                 ->form([
                     TextInput::make('subject')
                         ->label('Onderwerp')

@@ -80,7 +80,8 @@ class SupplierRelationManager extends RelationManager
                         'item_id' => $this->getOwnerRecord()->id 
                     ])),
                 DetachAction::make()
-                    ->requiresConfirmation(),
+                    ->requiresConfirmation()
+                    ->visible(auth()->user()->hasRole('admin')),
             ]);
     }
 }
