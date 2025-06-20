@@ -50,7 +50,6 @@ class VoorraadOverview extends BaseWidget
 
             Stat::make('Minimale voorraad in gevaar', $minQuantityInDanger)
                 ->color('danger')
-                ->description('Producten die minder dan de minimale voorraad hebben')
                 ->extraAttributes([
                     'class' => 'cursor-pointer',
                     'x-on:click' => "window.location.href='/vendors'",
@@ -58,7 +57,6 @@ class VoorraadOverview extends BaseWidget
 
             Stat::make('Laag voorraad', $lowStockProducts)
                 ->color('danger')
-                ->description('Producten die bijna minder hebben dan de minimale voorraad')
                 ->extraAttributes([
                     'class' => 'cursor-pointer',
                     'x-on:click' => "window.location.href='/vendor-item-stocks'",
@@ -66,7 +64,6 @@ class VoorraadOverview extends BaseWidget
 
             Stat::make('Totaal Producten', $totalProducts)
                 ->color('success')
-                ->description('Totaal aantal producten')
                 ->extraAttributes([
                     'class' => 'cursor-pointer',
                     'x-on:click' => "window.location.href='/items'",

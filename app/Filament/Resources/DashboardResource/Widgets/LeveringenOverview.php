@@ -48,7 +48,6 @@ class LeveringenOverview extends BaseWidget
         return [
             Stat::make('Niet-goedgekeurde bestellingen', $pendingOrders)
                 ->color('warning')
-                ->description('Bestellingen die nog niet zijn goedgekeurd')
                 ->extraAttributes([
                     'class' => 'cursor-pointer',
                     'x-on:click' => "window.location.href='/orders'",
@@ -56,7 +55,6 @@ class LeveringenOverview extends BaseWidget
             
             Stat::make('Verstuurde bestellingen', $totalShippedOrders)
                 ->color('primary')
-                ->description('Bestellingen die al zijn verzonden')
                 ->extraAttributes([
                     'class' => 'cursor-pointer',
                     'x-on:click' => "window.location.href='/orders'",
@@ -65,7 +63,6 @@ class LeveringenOverview extends BaseWidget
 
             Stat::make('Geleverde bestellingen', $totalDeliveredOrders)
                 ->color('success')
-                ->description('Bestellingen die al zijn geleverd')
                 ->extraAttributes([
                     'class' => 'cursor-pointer',
                     'x-on:click' => "window.location.href='/deliveries'",
