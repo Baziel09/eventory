@@ -48,7 +48,6 @@ class ItemRelationManager extends RelationManager
                    ->toggleable(isToggledHiddenByDefault: true),
                Tables\Columns\TextColumn::make('quantity')
                    ->label('Voorraad')
-                   ->sortable()
                    ->searchable(),
                 Tables\Columns\TextColumn::make('min_quantity')
                    ->label('Minimum voorraad')
@@ -57,7 +56,7 @@ class ItemRelationManager extends RelationManager
                    
 
                    BadgeColumn::make('quantity')
-                       ->label('voorraad')
+                       ->label('Voorraad')
                        ->colors([
                             'red' => fn ($record) => $record->pivot->quantity < $record->pivot->min_quantity,
                             'emerald' => fn ($record) => $record->pivot->quantity >= $record->pivot->min_quantity,
@@ -67,28 +66,30 @@ class ItemRelationManager extends RelationManager
            ])
                 ->filters([
                Tables\Filters\TrashedFilter::make(),
-               Tables\Filters\SelectFilter::make('category')
+               Tables\Filters\SelectFilter::make('categorie')
                    ->relationship('category', 'name'),
-               Tables\Filters\SelectFilter::make('unit')
+               Tables\Filters\SelectFilter::make('eenheid')
                    ->relationship('unit', 'name'),
            ])
            ->headerActions([
             Tables\Actions\AttachAction::make()
                 ->form([
                     Forms\Components\Select::make('recordId')
-                        ->label('Item')
+                        ->label('Product')
                         ->options(Item::pluck('name', 'id'))
                         ->searchable()
                         ->createOptionForm([
-                            Forms\Components\TextInput::make('name')->required(),
-                            Forms\Components\Select::make('unit_id')
-                                ->label('Unit')
-                                ->options(Unit::pluck('name', 'id'))
-                                ->required(),
-                            Forms\Components\Select::make('category_id')
-                                ->label('Category')
-                                ->options(Category::pluck('name', 'id'))
-                                ->required(),
+                    Forms\Components\TextInput::make('name')
+                        ->required()
+                        ->label('Naam'),
+                    Forms\Components\Select::make('unit_id')
+                        ->label('Eenheid')
+                        ->options(Unit::pluck('name', 'id'))
+                        ->required(),
+                    Forms\Components\Select::make('category_id')
+                        ->label('Categorie')
+                        ->options(Category::pluck('name', 'id'))
+                        ->required(),
                         ])
                         ->createOptionUsing(function (array $data): int {
                             $item = Item::create($data);
@@ -96,6 +97,7 @@ class ItemRelationManager extends RelationManager
                         }),
                     Forms\Components\TextInput::make('quantity')
                         ->numeric()
+                        ->label('Voorraad')
                         ->required(),
                         
                 ]),
@@ -103,7 +105,8 @@ class ItemRelationManager extends RelationManager
         
         ->actions([
             Tables\Actions\EditAction::make()
-                ->label('Edit')
+                ->label('Product bewerken')
+                ->modalHeading('Bewerken')
                 ->form([
                     Forms\Components\TextInput::make('quantity')
                         ->label('Quantiteit')
@@ -133,10 +136,13 @@ class ItemRelationManager extends RelationManager
                 }),
         
             Tables\Actions\Action::make('addCustom')
-                ->label('+ Custom')
+                ->label('+/- Aantal')
                 ->color('warning')
                 ->form([
-                    Forms\Components\TextInput::make('amount')->numeric()->required(),
+                    Forms\Components\TextInput::make('amount')
+                        ->label('Aantal')
+                        ->numeric()
+                        ->required(),
                 ])
                 ->action(function (array $data, Item $record) {
                     $record->pivot->quantity += (int) $data['amount'];
@@ -144,11 +150,11 @@ class ItemRelationManager extends RelationManager
                 }),
             Tables\Actions\Action::make('order')
                 ->label('Bestellen')
-                ->color('success')
                 ->icon('heroicon-o-shopping-cart')
                 ->url(fn ($record) => route('filament.admin.resources.orders.create', [
-                    'supplier_id' => $record->id,
-                    'item_id' => $this->getOwnerRecord()->id 
+                    'supplier_id' => $record->firstSupplier()?->id,
+                    'item_id' => $record->id,
+                    'vendor_id' => $this->getOwnerRecord()->id
                 ])),
     
         ])

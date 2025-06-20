@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Filament\Navigation\NavigationItem;
 use Filament\Facades\Filament;
+use App\Filament\Resources\VendorResource\RelationManagers\ItemRelationManager;
+
 
 
 class VendorResource extends Resource
@@ -29,12 +31,30 @@ class VendorResource extends Resource
     protected static ?string $navigationGroup = 'Festivalbeheer';
     protected static ?string $label = 'Standen';
     protected static ?string $pluralLabel = 'Standen';
+    protected static ?string $recordTitleAttribute = 'name';
     
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        return Vendor::whereHas('items', function ($query) {
+            $query->whereColumn('quantity', '<', 'min_quantity');
+        })->count();
     }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        $count = Vendor::whereHas('items', function ($query) {
+            $query->whereColumn('quantity', '<', 'min_quantity');
+        })->count();
+
+        return match (true) {
+            $count === 0 => 'success',
+            $count <= 5 => 'warning',
+            default => 'danger',
+        };
+    }
+
+    protected static ?string $navigationBadgeTooltip = 'Voorraad in gevaar';
 
     public static function form(Form $form): Form
     {
@@ -55,7 +75,7 @@ class VendorResource extends Resource
             Forms\Components\Section::make('Notities')
                 ->schema([
                     Forms\Components\Textarea::make('notes')
-                        ->label('Notities')
+                        ->label('')
                         ->placeholder('Voeg hier notities toe over deze stand')
                         ->rows(3)
                         ->columnSpanFull(),

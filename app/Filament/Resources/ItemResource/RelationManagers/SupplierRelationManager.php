@@ -23,42 +23,58 @@ class SupplierRelationManager extends RelationManager
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Supplier')
+                    ->label('Leverancier')
                     ->url(fn (Supplier $record): string => route('filament.admin.resources.suppliers.edit', ['record' => $record])),
-                Tables\Columns\TextColumn::make('contact_email'),
-                Tables\Columns\TextColumn::make('contact_phone'),
-                Tables\Columns\TextColumn::make('pivot.cost_price')->label('Cost Price'),
+                Tables\Columns\TextColumn::make('contact_email')
+                    ->label('E-mail'),
+                Tables\Columns\TextColumn::make('contact_phone')
+                    ->label('Telefoon'),
+                Tables\Columns\TextColumn::make('pivot.cost_price')->label('Cost Price')
+                    ->label('Kostprijs'),
             ])
             ->headerActions([
                 AttachAction::make()
+                ->modalHeading('Leverancier koppelen')
                         ->form([
                             Forms\Components\Select::make('recordId')
-                                ->label('Supplier')
+                                ->required()
+                                ->label('Leverancier')
                                 ->options(Supplier::pluck('name', 'id'))
                                 ->searchable()
                                 ->createOptionForm([
-                                    Forms\Components\TextInput::make('name')->required(),
-                                    Forms\Components\TextInput::make('contact_email')->required()->email(),
-                                    Forms\Components\TextInput::make('contact_phone')->required(),
+                                    Forms\Components\TextInput::make('name')
+                                        ->required()
+                                        ->label('Naam leverancier'),
+                                    Forms\Components\TextInput::make('contact_email')
+                                        ->required()
+                                        ->email()
+                                        ->label('E-mail'),
+                                    Forms\Components\TextInput::make('contact_phone')
+                                        ->required()
+                                        ->label('Telefoon'),
                                 ])
                                 ->createOptionUsing(function (array $data): int {
                                     $supplier = Supplier::create($data);
                                     return $supplier->id;
                                 }),
-                            Forms\Components\TextInput::make('cost_price')->numeric()->required(),
+                            Forms\Components\TextInput::make('cost_price')
+                                ->numeric()
+                                ->label('Kostprijs')
+                                ->required(),
                         ]),
             ])
             ->actions([
                 EditAction::make()
-                    ->label('')
+                ->modalHeading('Kostprijs bewerken')
                     ->form([
                         Forms\Components\TextInput::make('cost_price')
                             ->numeric()
+                            ->label('Kostprijs')
                             ->required(),
                     ]),
                 Tables\Actions\Action::make('order')
                     ->label('Bestellen')
-                    ->icon('heroicon-o-plus-circle')
+                    ->icon('heroicon-o-shopping-cart')
                     ->url(fn ($record) => route('filament.admin.resources.orders.create', [
                         'supplier_id' => $record->id,
                         'item_id' => $this->getOwnerRecord()->id 

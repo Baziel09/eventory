@@ -40,39 +40,47 @@ class ItemRelationManager extends RelationManager
         return $table
             ->heading('Producten')
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Product')
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Productnaam')
                     ->url(fn (Item $record): string => route('filament.admin.resources.items.edit', ['record' => $record]))
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('category.name')->label('Category')
+                Tables\Columns\TextColumn::make('category.name')
+                    ->label('Categorie')
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('pivot.cost_price')
-                    ->label('Cost Price')
+                    ->label('Kostprijs')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('unit.name')->label('Unit')
+                Tables\Columns\TextColumn::make('unit.name')
+                    ->label('Eenheid')
                     ->sortable()
                     ->searchable(),
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
-                Tables\Filters\SelectFilter::make('category')->relationship('category', 'name'),
+                Tables\Filters\SelectFilter::make('category')
+                    ->relationship('category', 'name')
+                    ->label('Categorie'),
             ])
             ->headerActions([
                 Tables\Actions\AttachAction::make()
+                ->modalHeading('Productkoppelen')
                     ->form([
                         Forms\Components\Select::make('recordId')
                             ->label('Product')
                             ->options(Item::pluck('name', 'id'))
                             ->searchable()
                             ->createOptionForm([
-                                Forms\Components\TextInput::make('name')->required(),
+                                Forms\Components\TextInput::make('name')   
+                                    ->required()
+                                    ->label('Naam'),
                                 Forms\Components\Select::make('unit_id')
-                                    ->label('Unit')
+                                    ->label('Eenheid')
                                     ->options(Unit::pluck('name', 'id'))
                                     ->required(),
                                 Forms\Components\Select::make('category_id')
-                                    ->label('Category')
+                                    ->label('Categorie')
                                     ->options(Category::pluck('name', 'id'))
                                     ->required(),
                             ])
@@ -80,18 +88,29 @@ class ItemRelationManager extends RelationManager
                                 $item = Item::create($data);
                                 return $item->id;
                             }),
-                        Forms\Components\TextInput::make('cost_price')->numeric()->required(),
+                        Forms\Components\TextInput::make('cost_price')
+                        ->numeric()
+                        ->required()
+                        ->label('Kostprijs'),
                     ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Edit')
+                    ->label('Bewerken')
+                    ->modalHeading('Kostprijs bewerken')
                     ->form([
                         Forms\Components\TextInput::make('cost_price')
-                            ->label('Cost Price')
+                            ->label('Kostprijs')
                             ->numeric()
                             ->required(),
                     ]),
+                Tables\Actions\Action::make('Order')
+                    ->label('Bestellen')
+                    ->icon('heroicon-o-shopping-cart')
+                    ->url(fn ($record) => route('filament.admin.resources.orders.create', [
+                        'supplier_id' => $this->getOwnerRecord()->id,
+                        'item_id' => $record->id
+                    ])),
                 Tables\Actions\DetachAction::make(),
             ]);
     }
