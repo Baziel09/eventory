@@ -24,7 +24,7 @@ use App\Models\VendorItemStock;
 
 class LeveringenOverview extends BaseWidget
 {
-    protected ?string $heading = 'Leveringen';
+    protected ?string $heading = 'Inkoop & Leveringen';
 
 
     protected static ?int $sort = 1;

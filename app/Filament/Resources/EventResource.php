@@ -24,6 +24,10 @@ class EventResource extends Resource
 
     protected static ?string $pluralLabel = 'Evenementen';
 
+    protected static ?string $label = 'Evenement';
+    
+    protected static ?string $recordTitleAttribute = 'name';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -113,8 +117,17 @@ class EventResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListEvents::route('/'),
+            'index' => Pages\ListEvents::route('/', function () {
+                $firstEvent = \App\Models\Event::query()->first();
+
+                if ($firstEvent) {
+                    return redirect(EventResource::getUrl('edit', ['record' => $firstEvent->getKey()]));
+                }
+
+                abort(404, 'Geen evenementen gevonden.');
+            }),
             'edit' => Pages\EditEvent::route('/{record}/edit'),
+            
         ];
     }
 }

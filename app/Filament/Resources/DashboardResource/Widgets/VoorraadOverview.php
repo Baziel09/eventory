@@ -24,8 +24,7 @@ use App\Models\VendorItemStock;
 
 class VoorraadOverview extends BaseWidget
 {
-    protected ?string $heading = 'Voorraad';
-
+    protected ?string $heading = 'Voorraad & Producten';
 
     protected static ?int $sort = 2;
 

@@ -24,6 +24,8 @@ class UserResource extends Resource
     protected static ?string $pluralLabel = 'Gebruikers';
 
     protected static ?string $recordTitleAttribute = 'name';
+    protected static ?string $label = 'Gebruiker';
+
 
     public static function form(Form $form): Form
     {
