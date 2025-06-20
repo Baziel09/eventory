@@ -25,6 +25,8 @@ class DeliveryResource extends Resource
 
     protected static ?string $navigationLabel = 'Leveringen';
     
+    protected static ?string $label = 'Levering';
+    
     protected static ?string $pluralLabel = 'Leveringen';
     
     protected static ?int $navigationSort = 3;
@@ -37,9 +39,10 @@ class DeliveryResource extends Resource
                     ->label('Bestelnummer')
                     ->relationship('order', 'id')
                     ->required(),
-                Forms\Components\DateTimePicker::make('delivered_at'),
+                Forms\Components\DateTimePicker::make('delivered_at')
+                    ->label('Levering geaccepteerd op'),
                 Forms\Components\select::make('user_id')
-                    ->label('Geaccepteerd door:')
+                    ->label('Geaccepteerd door')
                     ->relationship('user', 'name')
                     ->required(),
             ]);
@@ -84,18 +87,27 @@ class DeliveryResource extends Resource
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->url(fn (Delivery $record): string => route('filament.admin.resources.orders.edit', ['record' => $record->order_id])),
                 Tables\Actions\EditAction::make()
-                    ->label(''),  
+                    ->label('')
+                    ->visible(auth()->user()->hasRole('admin')),  
                 Tables\Actions\DeleteAction::make()
                     ->label(''),
                 Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(auth()->user()->hasRole('admin')),
+                    Tables\Actions\ForceDeleteBulkAction::make()
+                        ->visible(auth()->user()->hasRole('admin')),
+                    Tables\Actions\RestoreBulkAction::make()
+                        ->visible(auth()->user()->hasRole('admin')),
                 ]),
-            ]);
+            ])
+            ->recordUrl(
+                fn ($record) => auth()->user()->hasRole('admin') 
+                    ? DeliveryResource::getUrl('edit', ['record' => $record]) 
+                    : null
+            );
     }
 
     public static function getRelations(): array

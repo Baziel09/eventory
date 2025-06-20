@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\OrderResource\Pages;
 use App\Filament\Resources\OrderResource\RelationManagers;
 use App\Models\Order;
+use App\Models\User;
 use App\Models\Vendor;
 use App\Models\Supplier;
 use App\Models\Item;
@@ -29,6 +30,7 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section as FormSection;
+use Filament\Forms\Components\Hidden;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
@@ -41,6 +43,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use App\Mail\OrderMail;
 use App\Mail\ConsolidatedOrderMail;
 use App\Services\OrderPdfService;
@@ -67,6 +70,9 @@ class OrderResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
+        if (auth()->user()->hasRole('voorraadbeheerder')) {
+            return static::getModel()::where('status', 'pending')->where('user_id', auth()->id())->count();
+        }
         return static::getModel()::where('status', 'pending')->count();
     }
 
@@ -132,7 +138,11 @@ class OrderResource extends Resource
                                         'cancelled' => 'Geannuleerd',
                                     ])
                                     ->default('pending')
-                                    ->required(),
+                                    ->required()
+                                    ->disabled(fn () => auth()->user()->hasRole('voorraadbeheerder')),
+                                    
+                                Hidden::make('user_id')
+                                    ->default(fn () => auth()->id()),
                             ]),
                     ]),
 
@@ -378,6 +388,7 @@ class OrderResource extends Resource
                         return match ($state) {
                             'pending' => 'In afwachting',
                             'confirmed' => 'Bevestigd',
+                            'sent' => 'Verstuurd',
                             'delivered' => 'Geleverd',
                             'cancelled' => 'Geannuleerd',
                             default => $state,
@@ -433,8 +444,8 @@ class OrderResource extends Resource
                     ->options(Supplier::all()->pluck('name', 'id')),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()
-                    ->label(''),
+            //     Tables\Actions\ViewAction::make()
+            //         ->label(''),
                 Tables\Actions\EditAction::make()
                     ->label(''),
             
@@ -471,7 +482,7 @@ class OrderResource extends Resource
                     ->label('Bevestigen')
                     ->icon('heroicon-o-check-circle')
                     ->color('emerald')
-                    ->visible(fn (Order $record) => $record->status === 'pending')
+                    ->visible(fn (Order $record) => $record->status === 'pending' && Auth::user()->hasRole('admin'))
                     ->action(function (Order $record) {
                         $record->update(['status' => 'confirmed']);
                         
@@ -485,7 +496,7 @@ class OrderResource extends Resource
                     ->label('Verstuur')
                     ->icon('heroicon-o-envelope')
                     ->color('blue')
-                    ->visible(fn (Order $record) => $record->status === 'confirmed')
+                    ->visible(fn (Order $record) => $record->status === 'confirmed' && Auth::user()->hasRole('admin'))
                     ->form([
                         TextInput::make('subject')
                             ->label('Onderwerp')
@@ -569,6 +580,7 @@ class OrderResource extends Resource
                     ->icon('heroicon-o-truck')
                     ->color('green')
                     ->visible(fn (Order $record) => $record->status === 'sent')
+                    ->requiresConfirmation()
                     ->action(function (Order $record) {
                         \DB::transaction(function () use ($record) {
                             $record->update(['status' => 'delivered']);
@@ -627,6 +639,7 @@ class OrderResource extends Resource
                     ->icon('heroicon-o-envelope')
                     ->color('blue')
                     ->requiresConfirmation()
+                    ->visible(auth()->user()->hasRole('admin'))
                     ->modalHeading('Gecombineerde bestellingen versturen')
                     ->modalDescription('De geselecteerde bestellingen worden per leverancier gecombineerd en verstuurd als één PDF.')
                     ->form([

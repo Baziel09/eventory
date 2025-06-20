@@ -24,7 +24,7 @@ class SupplierRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Supplier')
-                    ->url(fn (Supplier $record): string => route('filament.admin.resources.suppliers.edit', ['record' => $record])),
+                    ->url(fn (Supplier $record): ?string => auth()->user()->hasRole('admin') ? route('filament.admin.resources.suppliers.edit', ['record' => $record]) : null),
                 Tables\Columns\TextColumn::make('contact_email'),
                 Tables\Columns\TextColumn::make('contact_phone'),
                 Tables\Columns\TextColumn::make('pivot.cost_price')->label('Cost Price'),
@@ -46,7 +46,8 @@ class SupplierRelationManager extends RelationManager
                                     return $supplier->id;
                                 }),
                             Forms\Components\TextInput::make('cost_price')->numeric()->required(),
-                        ]),
+                        ])
+                        ->visible(auth()->user()->hasRole('admin')),
             ])
             ->actions([
                 EditAction::make()
@@ -64,7 +65,8 @@ class SupplierRelationManager extends RelationManager
                         'item_id' => $this->getOwnerRecord()->id 
                     ])),
                 DetachAction::make()
-                    ->requiresConfirmation(),
+                    ->requiresConfirmation()
+                    ->visible(auth()->user()->hasRole('admin')),
             ]);
     }
 }
