@@ -45,6 +45,11 @@ class Item extends Model
             ->withPivot('cost_price')
             ->withTimestamps();
     }
+    
+    public function firstSupplier()
+    {
+        return $this->suppliers()->first();
+    }
 
     public function orders()
     {

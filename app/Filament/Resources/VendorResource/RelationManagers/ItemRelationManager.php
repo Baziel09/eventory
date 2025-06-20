@@ -144,11 +144,11 @@ class ItemRelationManager extends RelationManager
                 }),
             Tables\Actions\Action::make('order')
                 ->label('Bestellen')
-                ->color('success')
                 ->icon('heroicon-o-shopping-cart')
                 ->url(fn ($record) => route('filament.admin.resources.orders.create', [
-                    'supplier_id' => $record->id,
-                    'item_id' => $this->getOwnerRecord()->id 
+                    'supplier_id' => $record->firstSupplier()?->id,
+                    'item_id' => $record->id,
+                    'vendor_id' => $this->getOwnerRecord()->id
                 ])),
     
         ])

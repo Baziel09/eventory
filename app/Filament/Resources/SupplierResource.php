@@ -24,6 +24,8 @@ class SupplierResource extends Resource
 
     protected static ?string $navigationGroup = 'Inkoop & Leveringen';
 
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static ?int $navigationSort = 1;
 
     protected static ?string $label = 'Leveranciers';
