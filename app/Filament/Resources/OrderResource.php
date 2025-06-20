@@ -93,7 +93,12 @@ class OrderResource extends Resource
                                     ->label('Stand')
                                     ->options(Vendor::all()->pluck('name', 'id'))
                                     ->required()
-                                    ->searchable(),
+                                    ->searchable()
+                                    ->reactive()
+                                    ->default(function () {
+                                        // Pre-fill vendor_id
+                                        return request()->query('vendor_id');
+                                    }),
                                     
                                 Select::make('supplier_id')
                                     ->label('Leverancier')
@@ -102,7 +107,7 @@ class OrderResource extends Resource
                                     ->searchable()
                                     ->reactive()
                                     ->default(function () {
-                                        // Pre-fill supplier_id from URL parameter
+                                        // Pre-fill supplier_id
                                         return request()->query('supplier_id');
                                     })
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) {

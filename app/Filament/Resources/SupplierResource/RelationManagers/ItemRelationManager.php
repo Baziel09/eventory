@@ -85,13 +85,20 @@ class ItemRelationManager extends RelationManager
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Edit')
+                    ->label('')
                     ->form([
                         Forms\Components\TextInput::make('cost_price')
                             ->label('Cost Price')
                             ->numeric()
                             ->required(),
                     ]),
+                Tables\Actions\Action::make('Order')
+                    ->label('Bestellen')
+                    ->icon('heroicon-o-shopping-cart')
+                    ->url(fn ($record) => route('filament.admin.resources.orders.create', [
+                        'supplier_id' => $this->getOwnerRecord()->id,
+                        'item_id' => $record->id
+                    ])),
                 Tables\Actions\DetachAction::make(),
             ]);
     }
