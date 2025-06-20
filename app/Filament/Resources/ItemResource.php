@@ -25,8 +25,10 @@ class ItemResource extends Resource
     protected static ?string $navigationLabel = 'Producten';
 
     protected static ?string $pluralLabel = 'Producten';
-    
 
+    protected static ?string $label = 'Product';
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Form $form): Form
     {

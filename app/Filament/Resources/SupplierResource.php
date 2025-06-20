@@ -34,12 +34,15 @@ class SupplierResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
+                    ->label('Naam')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('contact_email')
                     ->email()
+                    ->label('E-mail')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('contact_phone')
                     ->tel()
+                    ->label('Telefoonnummer')
                     ->maxLength(255),
             ]);
     }
