@@ -37,16 +37,10 @@ class EventResource extends Resource
                     ->label('Naam')
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('discription')
+                Forms\Components\TextInput::make('address')
                     ->required()
-                    ->label('Beschrijving')
-                    ->maxLength(750),
-
-                Forms\Components\TextInput::make('location')
-                    ->required()
-                    ->label('Locatie')
+                    ->label('Adres')
                     ->maxLength(255),
-
 
                 Forms\Components\DatePicker::make('start_date')
                     ->required()
@@ -56,6 +50,15 @@ class EventResource extends Resource
                     ->required()
                     ->label('Einddatum'),
 
+                Forms\Components\Section::make('Beschrijving')
+                ->schema([
+                    Forms\Components\Textarea::make('Description')
+                        ->label('')
+                        ->placeholder('Voeg hier notities toe over deze stand')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ])
+                ->collapsible(),
             ]);
     }
 
