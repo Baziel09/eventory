@@ -99,22 +99,27 @@ class VendorResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Naam')
                     ->searchable(),
+
+                Tables\Columns\TextColumn::make('location.name')
+                    ->label('Locatie')
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('event.name')
                     ->label('Festival')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('location.name')
-                    ->label('Locatie')
-                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('notes')
                     ->label('Notities')
                     ->limit(25)
                     ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Aangemaakt')
                     ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Laatst gewijzigd')
                     ->dateTime()
