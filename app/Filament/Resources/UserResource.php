@@ -56,16 +56,20 @@ class UserResource extends Resource
                         Forms\Components\TextInput::make('password')
                             ->label('Wachtwoord')
                             ->password()
+                            ->revealable()
+                            ->autocomplete('new-password') // <-- this is important
                             ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                             ->dehydrated(fn ($state) => filled($state))
                             ->required(fn (string $context): bool => $context === 'create')
                             ->maxLength(255)
                             ->confirmed(),
-                            
+
                         Forms\Components\TextInput::make('password_confirmation')
                             ->label('Bevestig wachtwoord')
                             ->password()
-                            ->requiredWith('password')
+                            ->revealable()
+                            ->autocomplete('new-password')
+                            ->required(fn ($get) => filled($get('password')))
                             ->maxLength(255),
                     ])->columns(2),
                     
