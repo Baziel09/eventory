@@ -28,6 +28,12 @@ class EventResource extends Resource
     
     protected static ?string $recordTitleAttribute = 'name';
 
+    public static function getNavigationUrl(): string
+    {
+        $event = \App\Models\Event::first(); // of `sole()` als je zeker weet dat er maar één is
+        return static::getUrl('edit', ['record' => $event]);
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -35,30 +41,31 @@ class EventResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->label('Naam')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
+
+                Forms\Components\TextInput::make('address')
+                    ->required()
+                    ->label('Beschrijving')
+                    ->maxLength(750)
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
                 Forms\Components\TextInput::make('address')
                     ->required()
                     ->label('Adres')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
                 Forms\Components\DatePicker::make('start_date')
                     ->required()
-                    ->label('Startdatum'),
+                    ->label('Startdatum')
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
                 
                 Forms\Components\DatePicker::make('end_date')
                     ->required()
-                    ->label('Einddatum'),
+                    ->label('Einddatum')
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
-                Forms\Components\Section::make('Beschrijving')
-                ->schema([
-                    Forms\Components\Textarea::make('Description')
-                        ->label('')
-                        ->placeholder('Voeg hier notities toe over deze stand')
-                        ->rows(3)
-                        ->columnSpanFull(),
-                ])
-                ->collapsible(),
             ]);
     }
 
