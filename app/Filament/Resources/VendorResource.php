@@ -104,6 +104,27 @@ class VendorResource extends Resource
                     ->label('Locatie')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('low_stock_count')
+                    ->label('Te lage voorraad')
+                    ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        $state === '0' => 'success',
+                        (int) $state <= 3 => 'warning',
+                        default => 'danger',
+                    })
+                    ->getStateUsing(function (Vendor $record): string {
+                        return (string) $record->items()
+                            ->whereRaw('vendor_item_stock.quantity < vendor_item_stock.min_quantity')
+                            ->count();
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->withCount([
+                            'items as low_stock_count' => function ($query) {
+                                $query->whereRaw('vendor_item_stock.quantity < vendor_item_stock.min_quantity');
+                            }
+                        ])->orderBy('low_stock_count', $direction);
+                    }),
+
                 Tables\Columns\TextColumn::make('event.name')
                     ->label('Festival')
                     ->searchable()
@@ -126,9 +147,14 @@ class VendorResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('event')
-                    ->relationship('event', 'name')
-                    ->label('Festival'),
+                Tables\Filters\Filter::make('has_low_stock')
+                    ->label('Heeft lage voorraad')
+                    ->query(fn (Builder $query): Builder => 
+                        $query->whereHas('items', function ($query) {
+                            $query->whereRaw('vendor_item_stock.quantity < vendor_item_stock.min_quantity');
+                        })
+                    ),
+
                 Tables\Filters\SelectFilter::make('location')
                     ->relationship('location', 'name')
                     ->label('Locatie op festival'),
