@@ -20,9 +20,9 @@ class EventResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
-    protected static ?string $navigationLabel = 'Evenementen';
+    protected static ?string $navigationLabel = 'Evenement';
 
-    protected static ?string $pluralLabel = 'Evenementen';
+    protected static ?string $pluralLabel = 'Evenement';
 
     protected static ?string $label = 'Evenement';
     
