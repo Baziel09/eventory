@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Order;
 use App\Models\Vendor;
 use App\Models\Supplier;
+use App\Models\Delivery;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
@@ -30,5 +31,16 @@ class OrderSeeder extends Seeder
                 ]);
             }
         }
+
+        $deliveredOrders = Order::where('status', 'delivered')->get();
+
+        foreach ($deliveredOrders as $order) {
+            Delivery::firstOrCreate([
+                'delivered_at' => now(),
+                'order_id' => $order->id,
+                'user_id' => $user?->id
+            ]);
+        }
+
     }
 }

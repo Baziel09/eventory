@@ -24,6 +24,8 @@ class ItemResource extends Resource
 
     protected static ?string $navigationLabel = 'Producten';
 
+    protected static ?string $navigationGroup = 'Voorraadbeheer';
+
     protected static ?string $pluralLabel = 'Producten';
 
     protected static ?string $label = 'Product';

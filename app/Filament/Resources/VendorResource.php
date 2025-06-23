@@ -28,7 +28,7 @@ class VendorResource extends Resource
 {
     protected static ?string $model = Vendor::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
-    protected static ?string $navigationGroup = 'Festivalbeheer';
+    protected static ?string $navigationGroup = 'Voorraadbeheer';
     protected static ?string $label = 'Standen';
     protected static ?string $pluralLabel = 'Standen';
     protected static ?string $recordTitleAttribute = 'name';

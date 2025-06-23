@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\DashboardResource\Widgets;
 
-use App\Models\Order;
+use App\Models\Category;
+use App\Models\VendorItemStock;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\DB;
 
-class LeveringenChart extends ChartWidget
+class VoorraadDoughnut extends ChartWidget
 {
-    protected static ?string $heading = 'Bestellingen status';
+    protected static ?string $heading = 'Voorraadstatus Verdeling';
 
     protected function getType(): string
     {
@@ -33,41 +35,44 @@ class LeveringenChart extends ChartWidget
     protected function getData(): array
     {
         $user = auth()->user();
-        $statuses = ['pending', 'confirmed', 'sent', 'delivered'];
-
-        // Base query for orders filtered by statuses
-        $query = Order::whereIn('status', $statuses);
 
         if ($user->hasRole('voorraadbeheerder')) {
-            $query->where('user_id', $user->id);
+            $query = VendorItemStock::whereHas('vendor.users', function ($subQuery) use ($user) {
+                $subQuery->where('users.id', $user->id);
+            });
+        } else {
+            $query = VendorItemStock::query();
         }
 
-        // Get counts grouped by status
-        $counts = $query
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
+        // Stocks below min
+        $lowStockCount = (clone $query)->whereColumn('quantity', '<=', 'min_quantity')->count();
 
-        // Map counts to all statuses, defaulting to 0 if none found
-        $data = array_map(fn($status) => $counts[$status] ?? 0, $statuses);
+        // Stocks between min and 1.5 * min
+        $warningStockCount = (clone $query)
+            ->whereRaw('quantity > min_quantity AND quantity < min_quantity * 1.5')
+            ->count();
+
+        // Stocks above 1.5 * min (sufficient)
+        $sufficientStockCount = (clone $query)
+            ->whereRaw('quantity >= min_quantity * 1.5')
+            ->count();
+
+        $data = [$lowStockCount, $warningStockCount, $sufficientStockCount];
 
         return [
-            'labels' => ['In afwachting', 'Bevestigd', 'Verzonden', 'Geleverd'],
+            'labels' => ['Te weinig voorraad', 'Bijna te weinig', 'Voldoende voorraad'],
             'datasets' => [
                 [
                     'data' => $data,
                     'backgroundColor' => [
+                        'rgba(255, 99, 132, 1)',
                         'rgba(251, 190, 36, 1)',
                         'rgba(52, 211, 153, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 99, 132, 1)',
                     ],
                     'borderColor' => [
+                        'rgba(255, 99, 132, 1)',
                         'rgba(251, 190, 36, 1)',
                         'rgba(52, 211, 153, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 99, 132, 1)',
                     ],
                     'borderWidth' => 1,
                 ],
