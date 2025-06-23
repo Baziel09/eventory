@@ -20,13 +20,19 @@ class EventResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
-    protected static ?string $navigationLabel = 'Evenementen';
+    protected static ?string $navigationLabel = 'Evenement';
 
-    protected static ?string $pluralLabel = 'Evenementen';
+    protected static ?string $pluralLabel = 'Evenement';
 
     protected static ?string $label = 'Evenement';
     
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationUrl(): string
+    {
+        $event = \App\Models\Event::first(); // of `sole()` als je zeker weet dat er maar één is
+        return static::getUrl('edit', ['record' => $event]);
+    }
 
     public static function form(Form $form): Form
     {
@@ -35,27 +41,34 @@ class EventResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->label('Naam')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
-                Forms\Components\TextInput::make('discription')
+                Forms\Components\TextInput::make('address')
                     ->required()
-                    ->label('Beschrijving')
-                    ->maxLength(750),
-
-                Forms\Components\TextInput::make('location')
-                    ->required()
-                    ->label('Locatie')
-                    ->maxLength(255),
-
+                    ->label('Adres')
+                    ->maxLength(255)
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
                 Forms\Components\DatePicker::make('start_date')
                     ->required()
-                    ->label('Startdatum'),
+                    ->label('Startdatum')
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
                 
                 Forms\Components\DatePicker::make('end_date')
                     ->required()
-                    ->label('Einddatum'),
+                    ->label('Einddatum')
+                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
+                Forms\Components\Section::make('Beschrijving')
+                ->schema([
+                    Forms\Components\Textarea::make('description')
+                        ->label('')
+                        ->placeholder('Voeg hier een beschrijving toe over dit evenement')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ])
+                ->collapsible(),
             ]);
     }
 

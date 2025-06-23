@@ -24,7 +24,11 @@ class SupplierRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Leverancier')
-                    ->url(fn (Supplier $record): string => route('filament.admin.resources.suppliers.edit', ['record' => $record])),
+                    ->url(
+                        auth()->user()->hasRole('admin')
+                            ? fn (Supplier $record): string => route('filament.admin.resources.suppliers.edit', ['record' => $record])
+                            : null,
+                    ),
                 Tables\Columns\TextColumn::make('contact_email')
                     ->label('E-mail'),
                 Tables\Columns\TextColumn::make('contact_phone')
@@ -61,7 +65,8 @@ class SupplierRelationManager extends RelationManager
                                 ->numeric()
                                 ->label('Kostprijs')
                                 ->required(),
-                        ]),
+                        ])
+                        ->visible(auth()->user()->hasRole('admin')),
             ])
             ->actions([
                 EditAction::make()

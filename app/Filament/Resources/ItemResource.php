@@ -24,6 +24,8 @@ class ItemResource extends Resource
 
     protected static ?string $navigationLabel = 'Producten';
 
+    protected static ?string $navigationGroup = 'Voorraadbeheer';
+
     protected static ?string $pluralLabel = 'Producten';
 
     protected static ?string $label = 'Product';
@@ -82,12 +84,9 @@ class ItemResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\RestoreAction::make()
-                    ->visible(auth()->user()->hasRole('admin')),
-                Tables\Actions\ForceDeleteAction::make()
-                    ->visible(auth()->user()->hasRole('admin')),
-                Tables\Actions\DeleteAction::make()
-                    ->visible(auth()->user()->hasRole('admin')),
+                Tables\Actions\RestoreAction::make(),
+                Tables\Actions\ForceDeleteAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

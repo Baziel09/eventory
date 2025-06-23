@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
@@ -31,7 +32,15 @@ class UserSeeder extends Seeder
                 'phone' => '0687654321',
                 'is_active' => true,
             ]
+
         );
+
+        // Get a vendor
+        $vendor = Vendor::first();
+
+        // Attach user to vendor (many-to-many)
+        $voorraadUser->vendor()->syncWithoutDetaching([$vendor->id]);
+
         $voorraadUser->assignRole('voorraadbeheerder');
         
         $vrijwilligerUser = User::firstOrCreate(

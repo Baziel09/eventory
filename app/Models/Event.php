@@ -12,7 +12,8 @@ class Event extends Model
         'name',
         'location_id', 
         'start_date', 
-        'end_date'
+        'end_date',
+        'description'
     ];
 
     public function vendors(): HasMany

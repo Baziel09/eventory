@@ -28,7 +28,7 @@ class VendorResource extends Resource
 {
     protected static ?string $model = Vendor::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
-    protected static ?string $navigationGroup = 'Festivalbeheer';
+    protected static ?string $navigationGroup = 'Voorraadbeheer';
     protected static ?string $label = 'Standen';
     protected static ?string $pluralLabel = 'Standen';
     protected static ?string $recordTitleAttribute = 'name';
@@ -99,31 +99,62 @@ class VendorResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Naam')
                     ->searchable(),
+
+                Tables\Columns\TextColumn::make('location.name')
+                    ->label('Locatie')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('low_stock_count')
+                    ->label('Te lage voorraad')
+                    ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        $state === '0' => 'success',
+                        (int) $state <= 3 => 'warning',
+                        default => 'danger',
+                    })
+                    ->getStateUsing(function (Vendor $record): string {
+                        return (string) $record->items()
+                            ->whereRaw('vendor_item_stock.quantity < vendor_item_stock.min_quantity')
+                            ->count();
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->withCount([
+                            'items as low_stock_count' => function ($query) {
+                                $query->whereRaw('vendor_item_stock.quantity < vendor_item_stock.min_quantity');
+                            }
+                        ])->orderBy('low_stock_count', $direction);
+                    }),
+
                 Tables\Columns\TextColumn::make('event.name')
                     ->label('Festival')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('location.name')
-                    ->label('Locatie')
-                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('notes')
                     ->label('Notities')
                     ->limit(25)
                     ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Aangemaakt')
                     ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Laatst gewijzigd')
                     ->dateTime()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('event')
-                    ->relationship('event', 'name')
-                    ->label('Festival'),
+                Tables\Filters\Filter::make('has_low_stock')
+                    ->label('Heeft lage voorraad')
+                    ->query(fn (Builder $query): Builder => 
+                        $query->whereHas('items', function ($query) {
+                            $query->whereRaw('vendor_item_stock.quantity < vendor_item_stock.min_quantity');
+                        })
+                    ),
+
                 Tables\Filters\SelectFilter::make('location')
                     ->relationship('location', 'name')
                     ->label('Locatie op festival'),

@@ -49,20 +49,16 @@ class LocationSeeder extends Seeder
             ]);
             $locations[] = $location;
         }
-
-        // Create the event with a location_id
-        if (!empty($locations)) {
-            $firstLocation = $locations[0]; // Use the first location for the event
             
-            Event::firstOrCreate(
-                ['name' => 'The World Faire of Whispering Isles'],
-                [
-                    'name' => 'The World Faire of Whispering Isles',
-                    'location_id' => $firstLocation->id,
-                    'start_date' => now()->addDays(30),
-                    'end_date' => now()->addDays(32),
-                ]
-            );
-        }
+        Event::firstOrCreate(
+            ['name' => 'The World Faire of Whispering Isles'],
+            [
+                'name' => 'The World Faire of Whispering Isles',
+                'address' => 'Prestantstraat 27 Maastricht',
+                'start_date' => now()->addDays(30),
+                'end_date' => now()->addDays(32),
+                'description' => 'The World Faire of Whispering Isles is een magisch festival op een mysterieuze eilandengroep waar fantasie en werkelijkheid samensmelten. Bezoekers reizen langs themadorpen vol elfen, steampunk, muziek, vuurshows en betoverende markten. Met interactieve verhalen, workshops en optredens word je geen toeschouwer, maar deel van een levend sprookje. Een unieke ervaring voor wie durft te dromen.',
+            ]
+        );
     }
 }

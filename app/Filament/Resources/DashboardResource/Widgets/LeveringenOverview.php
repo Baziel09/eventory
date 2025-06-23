@@ -39,11 +39,15 @@ class LeveringenOverview extends BaseWidget
 
     protected function getStats(): array
     {
+        if (auth()->user()->hasRole('voorraadbeheerder')) {
+            $pendingOrders = Order::where('status', 'pending')->where('user_id', auth()->id())->count();
+            $totalShippedOrders = Order::where('status', 'sent')->where('user_id', auth()->id())->count();
+            $totalDeliveredOrders = Order::where('status', 'delivered')->where('user_id', auth()->id())->count();
+        } else {
         $pendingOrders = Order::where('status', 'pending')->count();
         $totalShippedOrders = Order::where('status', 'sent')->count();
         $totalDeliveredOrders = Order::where('status', 'delivered')->count();
-
-
+        }
 
         return [
             Stat::make('Niet-goedgekeurde bestellingen', $pendingOrders)
