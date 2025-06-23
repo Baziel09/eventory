@@ -46,12 +46,6 @@ class EventResource extends Resource
 
                 Forms\Components\TextInput::make('address')
                     ->required()
-                    ->label('Beschrijving')
-                    ->maxLength(750)
-                    ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
-
-                Forms\Components\TextInput::make('address')
-                    ->required()
                     ->label('Adres')
                     ->maxLength(255)
                     ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
@@ -66,6 +60,15 @@ class EventResource extends Resource
                     ->label('Einddatum')
                     ->disabled(auth()->user()->hasRole('voorraadbeheerder')),
 
+                Forms\Components\Section::make('Beschrijving')
+                ->schema([
+                    Forms\Components\Textarea::make('description')
+                        ->label('')
+                        ->placeholder('Voeg hier een beschrijving toe over dit evenement')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ])
+                ->collapsible(),
             ]);
     }
 

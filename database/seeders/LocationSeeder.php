@@ -57,6 +57,7 @@ class LocationSeeder extends Seeder
                 'address' => 'Prestantstraat 27 Maastricht',
                 'start_date' => now()->addDays(30),
                 'end_date' => now()->addDays(32),
+                'description' => 'The World Faire of Whispering Isles is een magisch festival op een mysterieuze eilandengroep waar fantasie en werkelijkheid samensmelten. Bezoekers reizen langs themadorpen vol elfen, steampunk, muziek, vuurshows en betoverende markten. Met interactieve verhalen, workshops en optredens word je geen toeschouwer, maar deel van een levend sprookje. Een unieke ervaring voor wie durft te dromen.',
             ]
         );
     }
