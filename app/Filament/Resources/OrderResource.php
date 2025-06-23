@@ -377,6 +377,7 @@ class OrderResource extends Resource
                     
                 BadgeColumn::make('status')
                     ->label('Status')
+                    ->sortable()
                     ->colors([
                         'amber' => 'pending',
                         'emerald' => 'confirmed',
