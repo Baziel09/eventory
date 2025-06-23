@@ -36,9 +36,10 @@ class VoorraadChart extends ChartWidget
 
     protected function getData(): array
     {
-        $lowStockProducts = VendorItemStock::where('quantity', '<=', 10)->count();
-        $minQuantityInDanger = VendorItemStock::whereColumn('quantity', '<', 'min_quantity')->count();
+        $lowStockProducts = VendorItemStock::whereColumn('quantity', '<=', 'min_quantity')->count();
 
+        $minQuantityInDanger = VendorItemStock::whereRaw('quantity < min_quantity * 1.5')->count(); 
+        
         return [
             'labels' => [
                 'Te weinig voorraad',
