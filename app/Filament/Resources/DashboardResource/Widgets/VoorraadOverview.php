@@ -38,11 +38,29 @@ class VoorraadOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        $totalProducts = VendorItemStock::count();
-        $minQuantityInDanger = VendorItemStock::whereColumn('quantity', '<', 'min_quantity')->count();
-        $lowStockProducts = VendorItemStock::where('quantity', '<=', 10)->count();
+        $user = auth()->user();
 
+        if ($user->hasRole('voorraadbeheerder')) {
+            $lowStockProducts = VendorItemStock::whereHas('vendor.users', function ($query) use ($user) {
+                $query->where('users.id', $user->id);
+            })->whereColumn('quantity', '<=', 'min_quantity')->count();
 
+            $minQuantityInDanger = VendorItemStock::whereHas('vendor.users', function ($query) use ($user) {
+                $query->where('users.id', $user->id);
+            })->whereRaw('quantity < min_quantity * 1.5')->count();
+
+            $totalProducts = VendorItemStock::whereHas('vendor.users', function ($query) use ($user) {
+                $query->where('users.id', $user->id);
+            })->count();
+        } else {
+            $lowStockProducts = VendorItemStock::whereColumn('quantity', '<=', 'min_quantity')->count();
+
+            $minQuantityInDanger = VendorItemStock::whereRaw('quantity < min_quantity * 1.5')->count();
+
+            $totalProducts = VendorItemStock::count();
+        }
+
+        
 
 
         return [

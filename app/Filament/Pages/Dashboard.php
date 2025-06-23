@@ -8,6 +8,7 @@ use App\Filament\Resources\DashboardResource\Widgets\LeveringenOverview;
 use App\Filament\Resources\DashboardResource\Widgets\VoorraadOverview;
 use App\Filament\Resources\DashboardResource\Widgets\LeveringenChart;
 use App\Filament\Resources\DashboardResource\Widgets\VoorraadChart;
+use App\Filament\Resources\DashboardResource\Widgets\VoorraadDoughnut;
 
 class Dashboard extends Page
 {
@@ -21,7 +22,8 @@ class Dashboard extends Page
             LeveringenOverview::class,
             LeveringenChart::class,
             VoorraadOverview::class,
-            VoorraadChart::class
+            VoorraadChart::class,
+            VoorraadDoughnut::class
         ];
     }
 }
